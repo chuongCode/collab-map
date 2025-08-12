@@ -1,0 +1,14 @@
+# Python virtualenvs
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+
+# Local env files (tokens/keys)
+.env
