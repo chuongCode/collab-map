@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { io } from "socket.io-client";
 import type { LiveUser } from "../types";
 import { RemoteCursorManager } from "../lib/RemoteCursorManager";
 import { CURSOR_COLORS } from "../lib/cursorColors";
 import { useMapboxMap } from "../hooks/useMapboxMap";
+import { useSocket } from "../hooks/useSocket";
 
 const MAP_STYLE = import.meta.env.VITE_MAP_STYLE as string;
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
@@ -17,6 +17,7 @@ export default function Map() {
     initials: "YY",
   });
   const boardId = useMemo(() => "demo-board-1", []);
+  const socketRef = useSocket("http://localhost:8000", { transports: ["websocket"] });
 
   mapboxgl.accessToken = MAPBOX_TOKEN;
   const mapRef = useMapboxMap(containerRef, {
@@ -25,20 +26,25 @@ export default function Map() {
     zoom: 15,
   });
 
+  // Sets up collaborative features on the map
   useEffect(() => {
-    if (!mapRef.current) return;
+    // if map or socket is not ready, exit early
+    if (!mapRef.current || !socketRef.current) return;
 
+    // Add navigation controls to the map
     mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-    const socket = io("http://localhost:8000", { transports: ["websocket"] });
+    const socket = socketRef.current;
 
     const cursorManager = new RemoteCursorManager(mapRef.current, CURSOR_COLORS);
     cursorManager.attach(socket);
 
+    // When the socket connects, it emits a join_board event with the board ID and user info, letting the server know this user has joined the board.
     socket.on("connect", () => {
       socket.emit("join_board", { boardId, user: clientUser });
     });
 
+    // On every mouse move over the map, it emits the current longitude and latitude to the server via a cursor event. This enables real-time cursor sharing.
     function handleMouseMove(
       e: mapboxgl.MapMouseEvent & { originalEvent: MouseEvent }
     ) {
@@ -47,13 +53,13 @@ export default function Map() {
     }
     mapRef.current.on("mousemove", handleMouseMove);
 
+    // When the component unmounts, it removes the mouse move listener, emits a leave_board event to notify the server that this user has left the board, and disposes of the cursor manager.
     return () => {
       mapRef.current?.off("mousemove", handleMouseMove);
       socket.emit("leave_board");
-      socket.disconnect();
       cursorManager.dispose();
     };
-  }, [boardId, clientUser, mapRef]);
+  }, [boardId, clientUser, mapRef, socketRef]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />;
 }
