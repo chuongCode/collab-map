@@ -1,117 +1,65 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { io } from "socket.io-client";
-import type { CursorEvent, LiveUser } from "../types";
+import type { LiveUser } from "../types";
+import { RemoteCursorManager } from "../lib/RemoteCursorManager";
+import { CURSOR_COLORS } from "../lib/cursorColors";
+import { useMapboxMap } from "../hooks/useMapboxMap";
+import { useSocket } from "../hooks/useSocket";
 
 const MAP_STYLE = import.meta.env.VITE_MAP_STYLE as string;
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
-type SocketClient = {
-  emit: (event: string, ...args: any[]) => void;
-  on: (event: string, cb: (...args: any[]) => void) => void;
-  disconnect: () => void;
-};
-
-type CursorMarker = {
-  marker: mapboxgl.Marker;
-  lastLngLat: [number, number];
-  user?: LiveUser;
-};
-
 export default function Map() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const socketRef = useRef<SocketClient | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [clientUser] = useState<LiveUser>({
     id: crypto.randomUUID(),
     initials: "YY",
   });
   const boardId = useMemo(() => "demo-board-1", []);
-  const cursorMarkersRef = useRef<Record<string, CursorMarker>>({});
+  const socketRef = useSocket("http://localhost:8000", { transports: ["websocket"] });
 
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+  const mapRef = useMapboxMap(containerRef, {
+    style: MAP_STYLE,
+    center: [-77.63, 43.13],
+    zoom: 15,
+  });
+
+  // Sets up collaborative features on the map
   useEffect(() => {
-    if (!containerRef.current) return;
+    // if map or socket is not ready, exit early
+    if (!mapRef.current || !socketRef.current) return;
 
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    // Add navigation controls to the map
+    mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: MAP_STYLE,
-      center: [-111.9, 40.76], // starting coords
-      zoom: 10,
-    });
-    mapRef.current = map;
+    const socket = socketRef.current;
 
-    map.addControl(new mapboxgl.NavigationControl(), "top-right");
+    const cursorManager = new RemoteCursorManager(mapRef.current, CURSOR_COLORS);
+    cursorManager.attach(socket);
 
-    // Socket.IO client
-    const socket = io("http://localhost:8000", {
-      transports: ["websocket"],
-    });
-    socketRef.current = socket;
-
+    // When the socket connects, it emits a join_board event with the board ID and user info, letting the server know this user has joined the board.
     socket.on("connect", () => {
       socket.emit("join_board", { boardId, user: clientUser });
     });
 
-    socket.on("cursor", (ev: CursorEvent) => {
-      const key = ev.sid;
-      const existing = cursorMarkersRef.current[key];
-
-      const el = document.createElement("div");
-      el.style.background = "#111";
-      el.style.color = "#fff";
-      el.style.borderRadius = "12px";
-      el.style.padding = "2px 6px";
-      el.style.fontSize = "12px";
-      el.style.lineHeight = "16px";
-      el.style.whiteSpace = "nowrap";
-      el.style.pointerEvents = "none";
-      el.textContent = ev.user?.initials ?? "??";
-
-      const lngLat: [number, number] = [ev.lng, ev.lat];
-      if (!existing) {
-        const marker = new mapboxgl.Marker({ element: el })
-          .setLngLat(lngLat)
-          .addTo(map);
-        cursorMarkersRef.current[key] = {
-          marker,
-          lastLngLat: lngLat,
-          user: ev.user,
-        };
-      } else {
-        existing.marker.setLngLat(lngLat);
-        existing.user = ev.user ?? existing.user;
-        existing.lastLngLat = lngLat;
-      }
-    });
-
-    socket.on("user_left", (payload: { sid: string }) => {
-      const { sid } = payload;
-      const existing = cursorMarkersRef.current[sid as string];
-      if (existing) {
-        existing.marker.remove();
-        delete cursorMarkersRef.current[sid];
-      }
-    });
-
-    // Emit local cursor while moving on map
+    // On every mouse move over the map, it emits the current longitude and latitude to the server via a cursor event. This enables real-time cursor sharing.
     function handleMouseMove(
       e: mapboxgl.MapMouseEvent & { originalEvent: MouseEvent }
     ) {
       const { lng, lat } = e.lngLat;
       socket.emit("cursor", { lng, lat });
     }
-    map.on("mousemove", handleMouseMove);
+    mapRef.current.on("mousemove", handleMouseMove);
 
+    // When the component unmounts, it removes the mouse move listener, emits a leave_board event to notify the server that this user has left the board, and disposes of the cursor manager.
     return () => {
-      map.off("mousemove", handleMouseMove);
+      mapRef.current?.off("mousemove", handleMouseMove);
       socket.emit("leave_board");
-      socket.disconnect();
-      map.remove();
+      cursorManager.dispose();
     };
-  }, []);
+  }, [boardId, clientUser, mapRef, socketRef]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />;
 }
