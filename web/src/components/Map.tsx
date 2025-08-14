@@ -6,6 +6,7 @@ import { RemoteCursorManager } from "../lib/RemoteCursorManager";
 import { CURSOR_COLORS } from "../lib/cursorColors";
 import { useMapboxMap } from "../hooks/useMapboxMap";
 import { useSocket } from "../hooks/useSocket";
+import { Notification } from "./Notification"; // <-- import your notification
 
 const MAP_STYLE = import.meta.env.VITE_MAP_STYLE as string;
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
@@ -17,7 +18,12 @@ export default function Map() {
     initials: "YY",
   });
   const boardId = useMemo(() => "demo-board-1", []);
-  const socketRef = useSocket("http://localhost:8000", { transports: ["websocket"] });
+  const socketRef = useSocket("http://localhost:8000", {
+    transports: ["websocket"],
+  });
+
+  // Notification state
+  const [notification, setNotification] = useState<string | null>(null);
 
   mapboxgl.accessToken = MAPBOX_TOKEN;
   const mapRef = useMapboxMap(containerRef, {
@@ -36,12 +42,22 @@ export default function Map() {
 
     const socket = socketRef.current;
 
-    const cursorManager = new RemoteCursorManager(mapRef.current, CURSOR_COLORS);
+    const cursorManager = new RemoteCursorManager(
+      mapRef.current,
+      CURSOR_COLORS
+    );
     cursorManager.attach(socket);
 
     // When the socket connects, it emits a join_board event with the board ID and user info, letting the server know this user has joined the board.
     socket.on("connect", () => {
       socket.emit("join_board", { boardId, user: clientUser });
+    });
+
+    // Listen for user_joined event
+    socket.on("user_joined", (user: LiveUser) => {
+      if (user.id !== clientUser.id) {
+        setNotification(`${user.initials} has joined the board!`);
+      }
     });
 
     // On every mouse move over the map, it emits the current longitude and latitude to the server via a cursor event. This enables real-time cursor sharing.
@@ -58,8 +74,19 @@ export default function Map() {
       mapRef.current?.off("mousemove", handleMouseMove);
       socket.emit("leave_board");
       cursorManager.dispose();
+      socket.off("user_joined");
     };
   }, [boardId, clientUser, mapRef, socketRef]);
 
-  return <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />;
+  return (
+    <>
+      <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />
+      {notification && (
+        <Notification
+          message={notification}
+          onClose={() => setNotification(null)}
+        />
+      )}
+    </>
+  );
 }

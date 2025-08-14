@@ -138,6 +138,3 @@ async def cursor(sid: str, data: Dict[str, Any]):
 
     # Broadcast to room, excluding sender
     await sio.emit("cursor", payload, room=board_id, skip_sid=sid)
-
-
-
