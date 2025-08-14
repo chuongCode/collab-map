@@ -12,6 +12,10 @@ COLOR_PALETTE = [
     "#039855",
     "#DC6803",
     "#DD2590",
+    "#F7D158",
+    "#6A7796",
+    "#E22B2B",
+    "#8A3FFC",
 ]
 
 def register_board_handlers(sio):
