@@ -60,6 +60,13 @@ export default function Map() {
       }
     });
 
+    // Listen for user_left event
+    socket.on("user_left", (user: LiveUser) => {
+      if (user.id !== clientUser.id) {
+        setNotification(`${user.initials} has left the board.`);
+      }
+    });
+
     // On every mouse move over the map, it emits the current longitude and latitude to the server via a cursor event. This enables real-time cursor sharing.
     function handleMouseMove(
       e: mapboxgl.MapMouseEvent & { originalEvent: MouseEvent }
@@ -75,6 +82,7 @@ export default function Map() {
       socket.emit("leave_board");
       cursorManager.dispose();
       socket.off("user_joined");
+      socket.off("user_left");
     };
   }, [boardId, clientUser, mapRef, socketRef]);
 
