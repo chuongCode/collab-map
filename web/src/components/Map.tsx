@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import type { LiveUser } from "../types";
+import type { LiveUser, LiveUserWithColor } from "../types";
 import { RemoteCursorManager } from "../lib/RemoteCursorManager";
-import { CURSOR_COLORS } from "../lib/cursorColors";
 import { useMapboxMap } from "../hooks/useMapboxMap";
 import { useSocket } from "../hooks/useSocket";
-import { Notification } from "./Notification"; // <-- import your notification
+import { Notification } from "./Notification";
 import PinLayer from "./PinLayer";
 import PinControls from "./PinControls";
 import PinList from "./PinList";
@@ -28,7 +27,13 @@ export default function Map() {
   });
 
   // Notification state
-  const [notification, setNotification] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{
+    message: string;
+    color?: string;
+  } | null>(null);
+
+  // User list state (from server)
+  const [userList, setUserList] = useState<LiveUserWithColor[]>([]);
 
   mapboxgl.accessToken = MAPBOX_TOKEN;
   const mapRef = useMapboxMap(containerRef, {
@@ -36,6 +41,12 @@ export default function Map() {
     center: [-77.63, 43.13],
     zoom: 15,
   });
+
+  // Ref to always have the latest userList (if needed elsewhere)
+  const userListRef = useRef(userList);
+  useEffect(() => {
+    userListRef.current = userList;
+  }, [userList]);
 
   const { setRoute } = usePinsActions();
 
@@ -47,7 +58,6 @@ export default function Map() {
 
   // Sets up collaborative features on the map
   useEffect(() => {
-    // if map or socket is not ready, exit early
     if (!mapRef.current || !socketRef.current) return;
 
     // Add navigation controls to the map
@@ -55,32 +65,46 @@ export default function Map() {
 
     const socket = socketRef.current;
 
-    const cursorManager = new RemoteCursorManager(
-      mapRef.current,
-      CURSOR_COLORS
-    );
+    // Attach RemoteCursorManager (now only relays, does not assign colors)
+    const cursorManager = new RemoteCursorManager(mapRef.current);
     cursorManager.attach(socket);
 
-    // When the socket connects, it emits a join_board event with the board ID and user info, letting the server know this user has joined the board.
+    // On connect, join board
     socket.on("connect", () => {
       socket.emit("join_board", { boardId, user: clientUser });
     });
 
-    // Listen for user_joined event
-    socket.on("user_joined", (user: LiveUser) => {
-      if (user.id !== clientUser.id) {
-        setNotification(`${user.initials} has joined the board!`);
-      }
+    // Listen for user list updates
+    socket.on("user_list", (payload: { users: LiveUserWithColor[] }) => {
+      setUserList(payload.users || []);
     });
 
-    // Listen for user_left event
-    socket.on("user_left", (user: LiveUser) => {
-      if (user.id !== clientUser.id) {
-        setNotification(`${user.initials} has left the board.`);
+    // Listen for join/leave notifications (use userList for color)
+    socket.on(
+      "user_joined",
+      (payload: { sid: string; user: LiveUserWithColor }) => {
+        const { user } = payload;
+        if (user.id !== clientUser.id) {
+          setNotification({
+            message: `${user.initials} has joined the board!`,
+            color: user.color,
+          });
+        }
       }
-    });
+    );
+    socket.on(
+      "user_left",
+      (payload: { sid: string; user: LiveUserWithColor }) => {
+        const { user } = payload;
+        if (user.id !== clientUser.id) {
+          setNotification({
+            message: `${user.initials} has left the board.`,
+            color: user.color,
+          });
+        }
+      }
+    );
 
-    // On every mouse move over the map, it emits the current longitude and latitude to the server via a cursor event. This enables real-time cursor sharing.
     function handleMouseMove(
       e: mapboxgl.MapMouseEvent & { originalEvent: MouseEvent }
     ) {
@@ -89,14 +113,15 @@ export default function Map() {
     }
     mapRef.current.on("mousemove", handleMouseMove);
 
-    // When the component unmounts, it removes the mouse move listener, emits a leave_board event to notify the server that this user has left the board, and disposes of the cursor manager.
     return () => {
       mapRef.current?.off("mousemove", handleMouseMove);
       socket.emit("leave_board");
       cursorManager.dispose();
+      socket.off("user_list");
       socket.off("user_joined");
       socket.off("user_left");
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId, clientUser, mapRef, socketRef]);
 
   // Listen for route requests from UI
@@ -131,7 +156,8 @@ export default function Map() {
       <PinList map={mapObj} />
       {notification && (
         <Notification
-          message={notification}
+          message={notification.message}
+          userColor={notification.color}
           onClose={() => setNotification(null)}
         />
       )}

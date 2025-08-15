@@ -1,6 +1,5 @@
 import mapboxgl from "mapbox-gl";
 import type { CursorEvent, LiveUser } from "../types";
-import { ColorAssigner } from "./colorAssigner";
 import { createRemoteCursorEl } from "./cursorElement";
 
 type CursorMarker = {
@@ -15,22 +14,21 @@ type SocketLike = {
   off?: (event: string, cb: (...args: any[]) => void) => void;
 };
 
+// No color assignment here; color comes from server
 export class RemoteCursorManager {
   private map: mapboxgl.Map;
   private markers: Record<string, CursorMarker> = {};
-  private colors: ColorAssigner;
 
-  constructor(map: mapboxgl.Map, palette: string[]) {
+  constructor(map: mapboxgl.Map) {
     this.map = map;
-    this.colors = new ColorAssigner(palette);
   }
 
   attach(socket: SocketLike) {
-    const onCursor = (ev: CursorEvent) => {
+    const onCursor = (ev: CursorEvent & { color?: string }) => {
       if (ev.sid && socket.id && ev.sid === socket.id) return; // ignore self
 
       const key = ev.sid;
-      const color = this.colors.get(key);
+      const color = ev.color || "#222";
       const el = createRemoteCursorEl(ev.user?.initials ?? "??", color);
       const lngLat: [number, number] = [ev.lng, ev.lat];
 
@@ -52,14 +50,13 @@ export class RemoteCursorManager {
       }
     };
 
-    const onUserLeft = (payload: { sid: string }) => {
+    const onUserLeft = (payload: { sid: string; user?: LiveUser }) => {
       const { sid } = payload;
       const existing = this.markers[sid];
       if (existing) {
         existing.marker.remove();
         delete this.markers[sid];
       }
-      this.colors.release(sid);
     };
 
     socket.on("cursor", onCursor);
@@ -69,6 +66,5 @@ export class RemoteCursorManager {
   dispose() {
     Object.values(this.markers).forEach((m) => m.marker.remove());
     this.markers = {};
-    this.colors.reset();
   }
 }

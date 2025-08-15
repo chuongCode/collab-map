@@ -19,7 +19,10 @@ export async function fetchRouteGeoJSON(
   const feature: Route = {
     type: "Feature",
     geometry: { type: "LineString", coordinates: geom.coordinates },
-    properties: { distance: data.routes[0].distance, duration: data.routes[0].duration },
+    properties: {
+      distance: data.routes[0].distance,
+      duration: data.routes[0].duration,
+    },
   };
 
   return feature;

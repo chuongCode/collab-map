@@ -21,7 +21,8 @@ export default function PinControls({ map }: { map?: mapboxgl.Map | null }) {
       const lng = e.lngLat.lng;
       const lat = e.lngLat.lat;
       const created = add({ title: "Pin", coordinates: [lng, lat] });
-      if (map && created) map.easeTo({ center: created.coordinates, duration: 400 });
+      if (map && created)
+        map.easeTo({ center: created.coordinates, duration: 400 });
       setIsPlacing(false);
     };
 
@@ -45,9 +46,17 @@ export default function PinControls({ map }: { map?: mapboxgl.Map | null }) {
   };
 
   return (
-    <div style={{ position: "absolute", left: 12, top: 12, zIndex: 1001, pointerEvents: "auto" }}>
+    <div
+      style={{
+        position: "absolute",
+        left: 12,
+        top: 12,
+        zIndex: 1001,
+        pointerEvents: "auto",
+      }}
+    >
       <div style={{ display: "flex", gap: 8 }}>
-  <button onClick={addAtCenter}>Add Pin</button>
+        <button onClick={addAtCenter}>Add Pin</button>
         <button
           onClick={() => {
             // create route between the last two pins placed
@@ -57,7 +66,11 @@ export default function PinControls({ map }: { map?: mapboxgl.Map | null }) {
               const to = lastTwo[1].coordinates;
               const fromId = lastTwo[0].id;
               const toId = lastTwo[1].id;
-              window.dispatchEvent(new CustomEvent("request-route", { detail: { from, to, fromId, toId } }));
+              window.dispatchEvent(
+                new CustomEvent("request-route", {
+                  detail: { from, to, fromId, toId },
+                })
+              );
             }
           }}
         >

@@ -22,11 +22,13 @@ const usePins = create<PinsState>((set: any, get: any) => ({
     const id = pin.id ?? crypto.randomUUID();
     const newPin: Pin = { id, title: pin.title, coordinates: pin.coordinates };
     set((s: any) => ({ pins: [...s.pins, newPin] }));
-  // debug log removed
+    // debug log removed
     return newPin;
   },
   updatePin: (id, patch) =>
-    set((s: any) => ({ pins: s.pins.map((p: any) => (p.id === id ? { ...p, ...patch } : p)) })),
+    set((s: any) => ({
+      pins: s.pins.map((p: any) => (p.id === id ? { ...p, ...patch } : p)),
+    })),
   deletePin: (id) => {
     set((s: any) => ({ pins: s.pins.filter((p: any) => p.id !== id) }));
     // If the route references this pin remove the route

@@ -12,7 +12,9 @@ const ROUTE_LAYER_ID = "route-layer";
 export default function PinLayer({ map }: { map?: any | null }) {
   const { pins, selectedId, route } = usePinsState();
   const { update, select } = usePinsActions();
-  const draggingRef = useRef<{ id: string; start: [number, number] } | null>(null);
+  const draggingRef = useRef<{ id: string; start: [number, number] } | null>(
+    null
+  );
 
   // Initialize sources and layers once
   useEffect(() => {
@@ -151,7 +153,10 @@ export default function PinLayer({ map }: { map?: any | null }) {
     // Ensure the pins source exists before setting data
     if (!map.getSource(PINS_SOURCE_ID)) {
       try {
-        map.addSource(PINS_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addSource(PINS_SOURCE_ID, {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
       } catch (err) {
         // ignore if source already exists or style not ready
       }
@@ -169,7 +174,7 @@ export default function PinLayer({ map }: { map?: any | null }) {
     };
 
     // debug
-  // removed debug log
+    // removed debug log
 
     try {
       source?.setData(fc as any);
@@ -181,7 +186,7 @@ export default function PinLayer({ map }: { map?: any | null }) {
   // Sync route
   useEffect(() => {
     if (!map) return;
-  const src = map.getSource(ROUTE_SOURCE_ID) as any | undefined;
+    const src = map.getSource(ROUTE_SOURCE_ID) as any | undefined;
     if (!route) {
       src?.setData({ type: "FeatureCollection", features: [] } as any);
     } else {
@@ -193,14 +198,18 @@ export default function PinLayer({ map }: { map?: any | null }) {
   useEffect(() => {
     if (!map) return;
     const onClick = (e: mapboxgl.MapMouseEvent) => {
-      const features = map.queryRenderedFeatures(e.point, { layers: [PINS_LAYER_ID] });
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: [PINS_LAYER_ID],
+      });
       if (!features || features.length === 0) return;
       const f: any = features[0];
       const id = (f.properties && f.properties._id) || f.id;
       if (id) select(id as string);
     };
-  map.on("click", onClick);
-  return () => { map.off("click", onClick); };
+    map.on("click", onClick);
+    return () => {
+      map.off("click", onClick);
+    };
   }, [map, select]);
 
   // Dragging implementation using pointer events
@@ -215,10 +224,12 @@ export default function PinLayer({ map }: { map?: any | null }) {
       if (!map) return;
       const rect = canvas.getBoundingClientRect();
       const point = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      const features = map.queryRenderedFeatures(point as any, { layers: [PINS_LAYER_ID] });
+      const features = map.queryRenderedFeatures(point as any, {
+        layers: [PINS_LAYER_ID],
+      });
       if (!features || features.length === 0) return;
       const f: any = features[0];
-      activeId = f.id as string | undefined ?? null;
+      activeId = (f.id as string | undefined) ?? null;
       if (activeId) {
         isPointerDown = true;
         draggingRef.current = { id: activeId, start: [e.clientX, e.clientY] };
@@ -261,7 +272,10 @@ export default function PinLayer({ map }: { map?: any | null }) {
     const highlightLayerId = "pins-highlight";
     try {
       // Only try to add the layer when the style is ready
-      if ((typeof map.isStyleLoaded === "function" && map.isStyleLoaded()) || true) {
+      if (
+        (typeof map.isStyleLoaded === "function" && map.isStyleLoaded()) ||
+        true
+      ) {
         if (!map.getLayer(highlightLayerId)) {
           try {
             map.addLayer({
@@ -279,14 +293,19 @@ export default function PinLayer({ map }: { map?: any | null }) {
           } catch (err) {
             // ignore addLayer errors if style/sprite not ready
             // eslint-disable-next-line no-console
-            console.warn("PinLayer: failed to add highlight layer, will try later", err);
+            console.warn(
+              "PinLayer: failed to add highlight layer, will try later",
+              err
+            );
           }
         }
 
         const layer = map.getLayer(highlightLayerId);
         if (layer) {
           try {
-            const filter = selectedId ? ["==", ["get", "_id"], selectedId] : ["==", ["get", "_id"], ""];
+            const filter = selectedId
+              ? ["==", ["get", "_id"], selectedId]
+              : ["==", ["get", "_id"], ""];
             // @ts-ignore
             map.setFilter(highlightLayerId, filter);
           } catch (err) {

@@ -3,6 +3,8 @@ export type LiveUser = {
   name?: string;
   initials?: string;
 };
+// Extend LiveUser to include color (from server)
+export type LiveUserWithColor = LiveUser & { color?: string };
 
 export type CursorEvent = {
   sid: string;
