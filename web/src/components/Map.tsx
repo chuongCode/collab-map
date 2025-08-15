@@ -7,6 +7,11 @@ import { CURSOR_COLORS } from "../lib/cursorColors";
 import { useMapboxMap } from "../hooks/useMapboxMap";
 import { useSocket } from "../hooks/useSocket";
 import { Notification } from "./Notification"; // <-- import your notification
+import PinLayer from "./PinLayer";
+import PinControls from "./PinControls";
+import PinList from "./PinList";
+import { fetchRouteGeoJSON } from "../lib/route";
+import { usePinsActions } from "../hooks/usePins";
 
 const MAP_STYLE = import.meta.env.VITE_MAP_STYLE as string;
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
@@ -31,6 +36,14 @@ export default function Map() {
     center: [-77.63, 43.13],
     zoom: 15,
   });
+
+  const { setRoute } = usePinsActions();
+
+  // Keep a stateful reference to the map so child components re-render when the map is created
+  const [mapObj, setMapObj] = useState<mapboxgl.Map | null>(null);
+  useEffect(() => {
+    if (mapRef.current && mapObj !== mapRef.current) setMapObj(mapRef.current);
+  }, [mapRef, mapObj]);
 
   // Sets up collaborative features on the map
   useEffect(() => {
@@ -86,9 +99,30 @@ export default function Map() {
     };
   }, [boardId, clientUser, mapRef, socketRef]);
 
+  // Listen for route requests from UI
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      // @ts-ignore
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      const { from, to, fromId, toId } = detail as { from: [number, number]; to: [number, number]; fromId?: string; toId?: string };
+      const route = await fetchRouteGeoJSON(from, to);
+      if (route) {
+        // store the pin ids as properties so we can invalidate the route if pins change
+        route.properties = { ...route.properties, fromId, toId } as any;
+        setRoute(route);
+      }
+    };
+    window.addEventListener("request-route", handler as EventListener);
+    return () => window.removeEventListener("request-route", handler as EventListener);
+  }, [setRoute]);
+
   return (
     <>
-      <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />
+  <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />
+  <PinLayer map={mapObj} />
+  <PinControls map={mapObj} />
+  <PinList map={mapObj} />
       {notification && (
         <Notification
           message={notification}
