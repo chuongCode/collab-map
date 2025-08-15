@@ -1,8 +1,8 @@
 import { usePinsActions, usePinsState } from "../hooks/usePins";
 import { useEffect, useState } from "react";
-import type * as mapboxgl from "mapbox-gl";
+import type { Map as MapboxMap } from "mapbox-gl";
 
-export default function PinControls({ map }: { map?: mapboxgl.Map | null }) {
+export default function PinControls({ map }: { map?: MapboxMap | null }) {
   const { add, clear, clearRoute } = usePinsActions();
   const { pins } = usePinsState();
 
@@ -20,7 +20,8 @@ export default function PinControls({ map }: { map?: mapboxgl.Map | null }) {
     const onMapClick = (e: any) => {
       const lng = e.lngLat.lng;
       const lat = e.lngLat.lat;
-      const created = add({ title: "Pin", coordinates: [lng, lat] });
+      const color = (window as any).__CLIENT_COLOR as string | undefined;
+      const created = add({ title: "Pin", coordinates: [lng, lat], color });
       if (map && created)
         map.easeTo({ center: created.coordinates, duration: 400 });
       setIsPlacing(false);

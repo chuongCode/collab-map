@@ -19,6 +19,8 @@ export type Pin = {
   title?: string;
   // [lng, lat]
   coordinates: [number, number];
+  // optional hex color to tint the pin (e.g. from server-assigned user color)
+  color?: string;
 };
 
 export type Route = {

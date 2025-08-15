@@ -20,7 +20,12 @@ const usePins = create<PinsState>((set: any, get: any) => ({
   route: null,
   addPin: (pin) => {
     const id = pin.id ?? crypto.randomUUID();
-    const newPin: Pin = { id, title: pin.title, coordinates: pin.coordinates };
+    const newPin: Pin = {
+      id,
+      title: pin.title,
+      coordinates: pin.coordinates,
+      color: (pin as any).color,
+    };
     set((s: any) => ({ pins: [...s.pins, newPin] }));
     // debug log removed
     return newPin;
