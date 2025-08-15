@@ -1,18 +1,47 @@
 import { usePinsActions, usePinsState } from "../hooks/usePins";
+import { useEffect, useState } from "react";
 import type * as mapboxgl from "mapbox-gl";
 
 export default function PinControls({ map }: { map?: mapboxgl.Map | null }) {
   const { add, clear, clearRoute } = usePinsActions();
   const { pins } = usePinsState();
 
+  const [isPlacing, setIsPlacing] = useState(false);
+
+  // When in placing mode, attach a one-time click handler to the map to place the pin
+  useEffect(() => {
+    if (!isPlacing || !map) return;
+
+    // change cursor to crosshair
+    const canvas = map.getCanvas();
+    const prevCursor = canvas.style.cursor;
+    canvas.style.cursor = "crosshair";
+
+    const onMapClick = (e: any) => {
+      const lng = e.lngLat.lng;
+      const lat = e.lngLat.lat;
+      const created = add({ title: "Pin", coordinates: [lng, lat] });
+      if (map && created) map.easeTo({ center: created.coordinates, duration: 400 });
+      setIsPlacing(false);
+    };
+
+    // use once listener so it only triggers a single placement
+    map.once("click", onMapClick);
+
+    // cleanup: restore cursor and ensure listener removed
+    return () => {
+      try {
+        canvas.style.cursor = prevCursor || "";
+      } catch (e) {}
+      try {
+        map.off("click", onMapClick as any);
+      } catch (e) {}
+    };
+  }, [isPlacing, map, add]);
+
   const addAtCenter = () => {
-  // If map isn't ready yet, fall back to a sensible default center
-  const fallback: [number, number] = [-77.63, 43.13];
-  const center = map ? map.getCenter() : { lng: fallback[0], lat: fallback[1] };
-  const created = add({ title: "Pin", coordinates: [center.lng, center.lat] });
-  if (map && created) {
-    map.easeTo({ center: created.coordinates, duration: 400 });
-  }
+    // enter placement mode; clicking the map will place the pin
+    setIsPlacing((s) => !s);
   };
 
   return (

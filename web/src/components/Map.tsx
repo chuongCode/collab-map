@@ -51,7 +51,7 @@ export default function Map() {
     if (!mapRef.current || !socketRef.current) return;
 
     // Add navigation controls to the map
-    mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+    mapRef.current.addControl(new mapboxgl.NavigationControl(), "bottom-right");
 
     const socket = socketRef.current;
 
@@ -105,7 +105,12 @@ export default function Map() {
       // @ts-ignore
       const detail = (e as CustomEvent).detail;
       if (!detail) return;
-      const { from, to, fromId, toId } = detail as { from: [number, number]; to: [number, number]; fromId?: string; toId?: string };
+      const { from, to, fromId, toId } = detail as {
+        from: [number, number];
+        to: [number, number];
+        fromId?: string;
+        toId?: string;
+      };
       const route = await fetchRouteGeoJSON(from, to);
       if (route) {
         // store the pin ids as properties so we can invalidate the route if pins change
@@ -114,15 +119,16 @@ export default function Map() {
       }
     };
     window.addEventListener("request-route", handler as EventListener);
-    return () => window.removeEventListener("request-route", handler as EventListener);
+    return () =>
+      window.removeEventListener("request-route", handler as EventListener);
   }, [setRoute]);
 
   return (
     <>
-  <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />
-  <PinLayer map={mapObj} />
-  <PinControls map={mapObj} />
-  <PinList map={mapObj} />
+      <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />
+      <PinLayer map={mapObj} />
+      <PinControls map={mapObj} />
+      <PinList map={mapObj} />
       {notification && (
         <Notification
           message={notification}

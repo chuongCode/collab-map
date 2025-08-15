@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 // using `any` for map types here to keep file simple and avoid type import issues
 import { usePinsState, usePinsActions } from "../hooks/usePins";
 import type { Pin } from "../types";
+import pinUrl from "../assets/Map pin.svg";
 
 const PINS_SOURCE_ID = "pins";
 const ROUTE_SOURCE_ID = "route";
@@ -27,18 +28,72 @@ export default function PinLayer({ map }: { map?: any | null }) {
         }
 
         if (!map.getLayer(PINS_LAYER_ID)) {
+          // Try to load a custom SVG image and add it as an icon
           try {
-            map.addLayer({
-              id: PINS_LAYER_ID,
-              type: "symbol",
-              source: PINS_SOURCE_ID,
-              layout: {
-                "icon-image": "marker-15",
-                "icon-size": 1.6,
-                "icon-allow-overlap": true,
-              },
-              paint: {},
-            });
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+              try {
+                // addImage accepts HTMLImageElement; don't use SDF so original colors are preserved
+                map.addImage("custom-pin", img, { sdf: false });
+              } catch (err) {
+                // ignore (image might already exist)
+              }
+
+              // add the symbol layer using the custom image
+              try {
+                map.addLayer({
+                  id: PINS_LAYER_ID,
+                  type: "symbol",
+                  source: PINS_SOURCE_ID,
+                  layout: {
+                    "icon-image": "custom-pin",
+                    // shrink the icon so it fits the map better
+                    "icon-size": 0.6,
+                    "icon-allow-overlap": true,
+                    "icon-ignore-placement": true,
+                    "icon-anchor": "bottom",
+                  },
+                  paint: {},
+                });
+              } catch (err) {
+                // fallback to marker if adding symbol fails
+                try {
+                  map.addLayer({
+                    id: PINS_LAYER_ID,
+                    type: "symbol",
+                    source: PINS_SOURCE_ID,
+                    layout: {
+                      "icon-image": "marker-15",
+                      "icon-size": 1.2,
+                      "icon-allow-overlap": true,
+                      "icon-anchor": "bottom",
+                    },
+                    paint: {},
+                  });
+                } catch (e) {
+                  // ignore
+                }
+              }
+            };
+            img.onerror = () => {
+              // fallback to default marker if image fails to load
+              try {
+                map.addLayer({
+                  id: PINS_LAYER_ID,
+                  type: "symbol",
+                  source: PINS_SOURCE_ID,
+                  layout: {
+                    "icon-image": "marker-15",
+                    "icon-size": 1.2,
+                    "icon-allow-overlap": true,
+                    "icon-anchor": "bottom",
+                  },
+                  paint: {},
+                });
+              } catch (e) {}
+            };
+            img.src = pinUrl as string;
           } catch (err) {
             // symbol may fail if sprite not available; ignore
           }
@@ -120,21 +175,6 @@ export default function PinLayer({ map }: { map?: any | null }) {
       source?.setData(fc as any);
     } catch (err) {
       // setData may fail if source isn't ready; ignore
-    }
-
-    // ensure a simple circle layer exists for fallback visibility (only if source exists)
-    const fallbackId = "pins-circle-fallback";
-    if (map.getSource(PINS_SOURCE_ID) && !map.getLayer(fallbackId)) {
-      try {
-        map.addLayer({
-          id: fallbackId,
-          type: "circle",
-          source: PINS_SOURCE_ID,
-          paint: { "circle-radius": 8, "circle-color": "#ff5a5f" },
-        } as any);
-      } catch (err) {
-        // ignore layer add errors
-      }
     }
   }, [map, pins]);
 
