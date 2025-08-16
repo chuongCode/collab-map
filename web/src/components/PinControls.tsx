@@ -1,6 +1,7 @@
 import { usePinsActions, usePinsState } from "../hooks/usePins";
 import { useEffect, useState } from "react";
 import type * as mapboxgl from "mapbox-gl";
+import "../styles/pin-controls.css";
 
 export default function PinControls({ map }: { map?: mapboxgl.Map | null }) {
   const { add, clear, clearRoute } = usePinsActions();
@@ -12,7 +13,6 @@ export default function PinControls({ map }: { map?: mapboxgl.Map | null }) {
   useEffect(() => {
     if (!isPlacing || !map) return;
 
-    // change cursor to crosshair
     const canvas = map.getCanvas();
     const prevCursor = canvas.style.cursor;
     canvas.style.cursor = "crosshair";
@@ -26,7 +26,7 @@ export default function PinControls({ map }: { map?: mapboxgl.Map | null }) {
       setIsPlacing(false);
     };
 
-    // use once listener so it only triggers a single placement
+    // triggers a single placement
     map.once("click", onMapClick);
 
     // cleanup: restore cursor and ensure listener removed
@@ -40,23 +40,14 @@ export default function PinControls({ map }: { map?: mapboxgl.Map | null }) {
     };
   }, [isPlacing, map, add]);
 
-  const addAtCenter = () => {
-    // enter placement mode; clicking the map will place the pin
+  const togglePinPlacement = () => {
     setIsPlacing((s) => !s);
   };
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: 12,
-        top: 12,
-        zIndex: 1001,
-        pointerEvents: "auto",
-      }}
-    >
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={addAtCenter}>Add Pin</button>
+    <div className="pin-controls-container">
+      <div className="pin-controls-buttons">
+        <button onClick={togglePinPlacement}>Add Pin</button>
         <button
           onClick={() => {
             // create route between the last two pins placed

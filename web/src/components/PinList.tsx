@@ -1,6 +1,7 @@
 import { usePinsState, usePinsActions } from "../hooks/usePins";
 import type mapboxgl from "mapbox-gl";
 import type { Pin } from "../types";
+import "../styles/pin-list.css";
 
 export default function PinList({ map }: { map?: mapboxgl.Map | null }) {
   const { pins, selectedId } = usePinsState();
@@ -13,30 +14,20 @@ export default function PinList({ map }: { map?: mapboxgl.Map | null }) {
   };
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        right: 12,
-        top: 12,
-        zIndex: 10,
-        background: "rgba(255,255,255,0.9)",
-        padding: 8,
-      }}
-    >
-      <div style={{ fontWeight: 600 }}>Pins</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div className="pin-list-container">
+      <div className="pin-list-title">Pins</div>
+      <div className="pin-list-items">
         {pins.map((p) => (
-          <div
-            key={p.id}
-            style={{ display: "flex", gap: 6, alignItems: "center" }}
-          >
+          <div key={p.id} className="pin-list-item">
             <button
+              className={p.id === selectedId ? "selected" : ""}
               onClick={() => focus(p)}
-              style={{ fontWeight: p.id === selectedId ? 700 : 400 }}
             >
               {p.title ?? "Pin"}
             </button>
-            <button onClick={() => del(p.id)}>Del</button>
+            <button className="delete" onClick={() => del(p.id)}>
+              Del
+            </button>
           </div>
         ))}
       </div>
