@@ -1,9 +1,9 @@
 import { usePinsState, usePinsActions } from "../hooks/usePins";
-import type mapboxgl from "mapbox-gl";
+import type { Map as MapboxMap } from "mapbox-gl";
 import type { Pin } from "../types";
 import "../styles/pin-list.css";
 
-export default function PinList({ map }: { map?: mapboxgl.Map | null }) {
+export default function PinList({ map }: { map?: MapboxMap | null }) {
   const { pins, selectedId } = usePinsState();
   const { select, del } = usePinsActions();
 

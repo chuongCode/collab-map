@@ -36,13 +36,13 @@ export default function PinLayer({ map }: { map?: any | null }) {
             img.crossOrigin = "anonymous";
             img.onload = () => {
               try {
-                // addImage accepts HTMLImageElement; don't use SDF so original colors are preserved
-                map.addImage("custom-pin", img, { sdf: false });
+                // addImage accepts HTMLImageElement; add as SDF so we can tint it per-feature via 'icon-color'
+                map.addImage("custom-pin", img, { sdf: true });
               } catch (err) {
                 // ignore (image might already exist)
               }
 
-              // add the symbol layer using the custom image
+              // add the symbol layer using the custom SDF image and paint with per-feature color
               try {
                 map.addLayer({
                   id: PINS_LAYER_ID,
@@ -56,8 +56,32 @@ export default function PinLayer({ map }: { map?: any | null }) {
                     "icon-ignore-placement": true,
                     "icon-anchor": "bottom",
                   },
-                  paint: {},
+                  paint: {
+                    // use the feature's `color` property, defaulting to a neutral dark color
+                    "icon-color": ["coalesce", ["get", "color"], "#222"],
+                  },
                 });
+                // add a small white circle on top of the symbol to recreate the SVG's inner white hole
+                try {
+                  if (!map.getLayer("pins-hole")) {
+                    map.addLayer({
+                      id: "pins-hole",
+                      type: "circle",
+                      source: PINS_SOURCE_ID,
+                      paint: {
+                        "circle-color": "#fff",
+                        "circle-radius": 5,
+                        "circle-stroke-color": "rgba(0,0,0,0.08)",
+                        "circle-stroke-width": 1,
+                        // translate upward so the hole aligns with the visual center of the pin icon (pixels)
+                        "circle-translate": [0, -20],
+                        "circle-translate-anchor": "viewport",
+                      },
+                    });
+                  }
+                } catch (err) {
+                  // ignore
+                }
               } catch (err) {
                 // fallback to marker if adding symbol fails
                 try {
@@ -169,7 +193,7 @@ export default function PinLayer({ map }: { map?: any | null }) {
         type: "Feature",
         id: p.id,
         geometry: { type: "Point", coordinates: p.coordinates },
-        properties: { title: p.title, _id: p.id },
+        properties: { title: p.title, _id: p.id, color: p.color },
       })),
     };
 

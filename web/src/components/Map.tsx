@@ -77,6 +77,12 @@ export default function Map() {
     // Listen for user list updates
     socket.on("user_list", (payload: { users: LiveUserWithColor[] }) => {
       setUserList(payload.users || []);
+      // try to find our client user and expose color to other UI (PinControls)
+      try {
+        const me = (payload.users || []).find((u) => u.id === clientUser.id);
+        // @ts-ignore
+        window.__CLIENT_COLOR = me?.color;
+      } catch (e) {}
     });
 
     // Listen for join/leave notifications (use userList for color)
@@ -99,6 +105,7 @@ export default function Map() {
         if (user.id !== clientUser.id) {
           setNotification({
             message: `${user.initials} has left the board.`,
+            // right now, i think the user's color deletes before the notification is shown, so the color defaults to black. will fix soon.
             color: user.color,
           });
         }
