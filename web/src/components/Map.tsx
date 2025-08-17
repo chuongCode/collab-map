@@ -53,6 +53,28 @@ export default function Map() {
       socket.emit("join_board", { boardId, user: clientUser });
     });
 
+
+    //  Make built-in POIs clickable
+mapRef.current.on("click", (e) => {
+  const features = mapRef.current!.queryRenderedFeatures(e.point, {
+    layers: ["poi-label"], // default POI layer in Mapbox styles
+  });
+
+  if (!features.length) return;
+
+  const f = features[0];
+  const coords = (f.geometry as GeoJSON.Point).coordinates;
+
+  new mapboxgl.Popup()
+  .setLngLat(coords as [number, number])
+  .setHTML(
+    `<strong>${f.properties?.name}</strong><br>${f.properties?.category || ""}`
+  )
+  
+    .addTo(mapRef.current!);
+});
+
+
     // Listen for user_joined event
     socket.on("user_joined", (user: LiveUser) => {
       if (user.id !== clientUser.id) {
@@ -84,6 +106,11 @@ export default function Map() {
       socket.off("user_joined");
       socket.off("user_left");
     };
+
+    
+
+
+
   }, [boardId, clientUser, mapRef, socketRef]);
 
   return (
