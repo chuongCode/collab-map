@@ -1,4 +1,6 @@
 fastapi==0.115.5
 python-socketio[asgi]==5.11.4
 uvicorn[standard]==0.34.0
-
+python-dotenv
+sqlalchemy
+psycopg2-binary==2.9.7
