@@ -1,0 +1,55 @@
+.pin-list-container {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pin-list-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.pin-list-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pin-list-item {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pin-list-item button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.pin-list-item button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.pin-list-item button.selected {
+  font-weight: 700;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.pin-list-item button.delete {
+  color: #d32f2f;
+  font-size: 12px;
+}
+
+.pin-list-item button.delete:hover {
+  background-color: rgba(211, 47, 47, 0.1);
+}

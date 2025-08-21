@@ -1,0 +1,31 @@
+.pin-controls-container {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 1001;
+  pointer-events: auto;
+}
+
+.pin-controls-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.pin-controls-buttons button {
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.pin-controls-buttons button:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.pin-controls-buttons button:active {
+  background: #e5e5e5;
+}

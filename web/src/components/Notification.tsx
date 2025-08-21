@@ -1,25 +1,55 @@
-import React from "react";
+import { useEffect, useRef, useState } from "react";
+import "../styles/notification.css";
 
 type NotificationProps = {
   message: string;
   onClose: () => void;
+  userColor?: string; // renamed for clarity
+  duration?: number; // ms before auto-dismiss, default 3000
 };
 
-export function Notification({ message, onClose }: NotificationProps) {
+export function Notification({
+  message,
+  onClose,
+  userColor = "#222",
+  duration = 3000,
+}: NotificationProps) {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    timeoutRef.current = setTimeout(() => setVisible(false), duration);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [duration]);
+
+  // Fade out before unmounting
+  useEffect(() => {
+    if (!visible) {
+      const fadeTimeout = setTimeout(onClose, 400); // match fade-out animation
+      return () => clearTimeout(fadeTimeout);
+    }
+  }, [visible, onClose]);
+
   return (
-    <div style={{
-      position: "fixed",
-      top: 20,
-      right: 20,
-      background: "#222",
-      color: "#fff",
-      padding: "12px 24px",
-      borderRadius: 8,
-      zIndex: 9999,
-      boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-    }}>
-      {message}
-      <button style={{ marginLeft: 16 }} onClick={onClose}>Close</button>
+    <div className="notification-container">
+      <div
+        className={`notification-pill${!visible ? " notification-exit" : ""}`}
+        style={{ "--user-color": userColor } as React.CSSProperties}
+        tabIndex={0}
+        role="alert"
+        aria-live="assertive"
+      >
+        <span className="message">{message}</span>
+        <button
+          className="close-button"
+          onClick={() => setVisible(false)}
+          aria-label="Close notification"
+        >
+          ×
+        </button>
+      </div>
     </div>
   );
 }

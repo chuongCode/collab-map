@@ -1,23 +1,31 @@
-export type FeaturePoint = {
-  id: string;
-  type: "Feature";
-  geometry: { type: "Point"; coordinates: [number, number] };
-  properties: { title?: string };
-};
-export type FeatureCollection = {
-  type: "FeatureCollection";
-  features: FeaturePoint[];
-};
-
 export type LiveUser = {
   id: string;
   name?: string;
   initials?: string;
 };
+// Extend LiveUser to include color (from server)
+export type LiveUserWithColor = LiveUser & { color?: string };
 
 export type CursorEvent = {
   sid: string;
   lng: number;
   lat: number;
   user?: LiveUser;
+};
+
+// Pin and Route types for the pins / routing feature
+export type Pin = {
+  id: string;
+  title?: string;
+  // [lng, lat]
+  coordinates: [number, number];
+  // optional hex color to tint the pin (e.g. from server-assigned user color)
+  color?: string;
+};
+
+export type Route = {
+  // GeoJSON Feature LineString
+  type: "Feature";
+  geometry: { type: "LineString"; coordinates: [number, number][] };
+  properties?: Record<string, any> | null;
 };
