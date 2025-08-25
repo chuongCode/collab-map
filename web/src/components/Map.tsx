@@ -7,7 +7,7 @@ import { useMapboxMap } from "../hooks/useMapboxMap";
 import { useSocket } from "../hooks/useSocket";
 import { Notification } from "./Notification";
 import PinLayer from "./PinLayer";
-import PinControls from "./PinControls";
+import InspectorPanel from "./InspectorPanel";
 import PinList from "./PinList";
 import { fetchRouteGeoJSON } from "../lib/route";
 import { usePinsActions } from "../hooks/usePins";
@@ -61,7 +61,7 @@ export default function Map() {
     if (!mapRef.current || !socketRef.current) return;
 
     // Add navigation controls to the map
-    mapRef.current.addControl(new mapboxgl.NavigationControl(), "bottom-right");
+    mapRef.current.addControl(new mapboxgl.NavigationControl(), "bottom-left");
 
     const socket = socketRef.current;
 
@@ -159,8 +159,10 @@ export default function Map() {
     <>
       <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />
       <PinLayer map={mapObj} />
-      <PinControls map={mapObj} />
-      <PinList map={mapObj} />
+      <InspectorPanel map={mapObj} />
+      <div className="fixed left-4 top-4 z-50">
+        <PinList map={mapObj} />
+      </div>
       {notification && (
         <Notification
           message={notification.message}
