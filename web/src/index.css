@@ -1,9 +1,15 @@
-html, body, #root {
+@import "tailwindcss";
+
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
