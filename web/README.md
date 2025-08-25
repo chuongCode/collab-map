@@ -67,5 +67,3 @@ export default tseslint.config([
   },
 ]);
 ```
-
-In memory of Matt Fortes 💔
