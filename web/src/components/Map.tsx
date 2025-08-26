@@ -160,7 +160,7 @@ export default function Map() {
       <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />
       <PinLayer map={mapObj} />
       <InspectorPanel map={mapObj} />
-      <div className="fixed left-4 top-4 z-50">
+      <div className="fixed left-4 top-16 z-50">
         <PinList map={mapObj} />
       </div>
       {notification && (

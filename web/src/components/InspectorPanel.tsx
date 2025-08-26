@@ -1,14 +1,62 @@
 import { useEffect, useState } from "react";
+import { fetchRouteGeoJSON } from "../lib/route";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { usePinsActions, usePinsState } from "../hooks/usePins";
 
 export default function InspectorPanel({ map }: { map?: MapboxMap | null }) {
-  const { add, clear, clearRoute } = usePinsActions();
-  const { pins } = usePinsState();
+  const { add, clear, clearRoute, setRoute, select } = usePinsActions();
+  const { pins, selectedId } = usePinsState();
   const [isOpen, setIsOpen] = useState(true);
   const [isPlacing, setIsPlacing] = useState(false);
+  const [isSelectingRoute, setIsSelectingRoute] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // When in placing mode, attach a one-time click handler to the map to place the pin
+  const MIN_WIDTH = 240;
+  const DEFAULT_WIDTH = 320;
+  const MAX_WIDTH = 640;
+  const [width, setWidth] = useState<number>(DEFAULT_WIDTH);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = width;
+    const onMove = (ev: MouseEvent) => {
+      // anchored to right: moving mouse left increases width
+      const delta = startX - ev.clientX;
+      const newW = Math.max(
+        MIN_WIDTH,
+        Math.min(MAX_WIDTH, Math.round(startWidth + delta))
+      );
+      setWidth(newW);
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const startX = e.touches[0].clientX;
+    const startWidth = width;
+    const onMove = (ev: TouchEvent) => {
+      const clientX = ev.touches[0]?.clientX ?? startX;
+      const delta = startX - clientX;
+      const newW = Math.max(
+        MIN_WIDTH,
+        Math.min(MAX_WIDTH, Math.round(startWidth + delta))
+      );
+      setWidth(newW);
+    };
+    const onEnd = () => {
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onEnd);
+    };
+    document.addEventListener("touchmove", onMove, { passive: false });
+    document.addEventListener("touchend", onEnd);
+  };
+
   useEffect(() => {
     if (!isPlacing || !map) return;
 
@@ -21,11 +69,11 @@ export default function InspectorPanel({ map }: { map?: MapboxMap | null }) {
       const lat = e.lngLat.lat;
       const color = (window as any).__CLIENT_COLOR as string | undefined;
       const created = add({ title: "Pin", coordinates: [lng, lat], color });
-      if (map && created) map.easeTo({ center: created.coordinates, duration: 400 });
+      if (map && created)
+        map.easeTo({ center: created.coordinates, duration: 400 });
       setIsPlacing(false);
     };
 
-    // triggers a single placement
     map.once("click", onMapClick);
 
     // cleanup: restore cursor and ensure listener removed
@@ -41,28 +89,84 @@ export default function InspectorPanel({ map }: { map?: MapboxMap | null }) {
 
   const togglePinPlacement = () => setIsPlacing((s) => !s);
 
-  const requestRouteForLastTwo = () => {
-    if (pins.length >= 2) {
-      const lastTwo = pins.slice(-2);
-      const from = lastTwo[0].coordinates;
-      const to = lastTwo[1].coordinates;
-      const fromId = lastTwo[0].id;
-      const toId = lastTwo[1].id;
-      window.dispatchEvent(
-        new CustomEvent("request-route", { detail: { from, to, fromId, toId } })
-      );
-    }
+  // Start selection mode where user must pick two existing pins on the map
+  const startRouteSelection = () => {
+    if (pins.length < 2) return;
+    setSelectedIds([]);
+    setIsSelectingRoute(true);
   };
+
+  const cancelRouteSelection = () => {
+    setIsSelectingRoute(false);
+    setSelectedIds([]);
+    select(null);
+  };
+
+  // Watch the global selected pin id (set by clicking pins on the map). When in selection
+  // mode, collect two distinct selections and fetch the route.
+  useEffect(() => {
+    if (!isSelectingRoute) return;
+    if (!selectedId) return;
+    if (selectedIds.includes(selectedId)) return;
+
+    setSelectedIds((s) => {
+      const next = [...s, selectedId];
+      // once we have two selections, fetch route and exit selection mode
+      if (next.length === 2) {
+        const p1 = pins.find((p) => p.id === next[0]);
+        const p2 = pins.find((p) => p.id === next[1]);
+        if (p1 && p2) {
+          (async () => {
+            try {
+              const route = await fetchRouteGeoJSON(
+                p1.coordinates,
+                p2.coordinates
+              );
+              if (route) {
+                route.properties = {
+                  ...route.properties,
+                  fromId: p1.id,
+                  toId: p2.id,
+                } as any;
+                setRoute(route);
+              }
+            } catch (err) {
+              // ignore fetch errors for now
+            }
+          })();
+        }
+        // cleanup selection mode and clear map selection
+        setIsSelectingRoute(false);
+        select(null);
+        return [];
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, isSelectingRoute]);
 
   if (!isOpen) {
     return (
-      <div className="fixed right-4 top-1/3 z-50">
+      <div className="fixed right-4 top-4 z-60">
         <button
-          className="btn btn-sm text-white bg-[#3a3a3a] border-gray-600"
+          className="btn btn-square btn-sm bg-[#2c2c2c] border border-gray-700 text-white shadow-sm"
           onClick={() => setIsOpen(true)}
-          aria-label="Open inspector"
+          aria-label="Open Panel"
+          title="Open Panel"
         >
-          Inspect
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4"
+            aria-hidden="true"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
         </button>
       </div>
     );
@@ -70,56 +174,113 @@ export default function InspectorPanel({ map }: { map?: MapboxMap | null }) {
 
   return (
     <aside
-      className="fixed right-0 top-0 h-full z-50 w-80 bg-[#2c2c2c] text-white shadow-lg border-l border-gray-700"
-      aria-label="Inspector panel"
+      className="fixed right-0 top-0 h-full z-50 bg-[#2c2c2c] text-white shadow-lg border-l border-gray-700"
+      aria-label="Control panel"
+      style={{ width }}
     >
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <h3 className="text-lg font-medium text-gray-100">Inspector</h3>
+      {/* Resize handle (anchor on left edge) */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panel"
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        className="absolute left-0 top-0 h-full -ml-1 w-2 cursor-ew-resize"
+      />
+      <div
+        className="flex items-center justify-between p-4 border-b border-gray-700"
+        style={{ paddingRight: 8 }}
+      >
+        <h3 className="text-lg font-medium text-gray-100">Controls</h3>
         <div className="space-x-2">
           <button
-            className="btn btn-ghost btn-sm text-white"
+            className="btn btn-ghost btn-sm text-white p-2"
             onClick={() => setIsOpen(false)}
-            aria-label="Close inspector"
+            aria-label="Collapse Panel"
+            title="Collapse Panel"
           >
-            Close
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4"
+              aria-hidden="true"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
           </button>
         </div>
       </div>
 
-      <div className="p-4 space-y-4 overflow-auto text-gray-200" style={{ maxHeight: 'calc(100vh - 64px)' }}>
+      <div
+        className="p-4 space-y-4 overflow-auto text-gray-200"
+        style={{ maxHeight: "calc(100vh - 64px)" }}
+      >
         <section>
-          <div className="font-semibold mb-2 text-gray-100">Pins</div>
           <div className="flex flex-col gap-2">
             <button
-              className={`btn ${isPlacing ? 'btn-success' : 'btn-outline'} text-white`}
+              className={`btn ${
+                isPlacing ? "btn-success" : "btn-outline"
+              } text-white`}
               onClick={togglePinPlacement}
             >
-              {isPlacing ? 'Placing: Click map' : 'Add Pin'}
+              {isPlacing ? "Placing: Click map" : "Add Pin"}
             </button>
 
-            <button className="btn btn-accent text-white" onClick={requestRouteForLastTwo}>
-              Route (last 2)
-            </button>
+            {!isSelectingRoute ? (
+              <button
+                className="btn btn-accent text-white"
+                onClick={startRouteSelection}
+              >
+                Route (select 2)
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  className="btn btn-primary text-white"
+                  onClick={cancelRouteSelection}
+                >
+                  Cancel
+                </button>
+                <div className="text-sm self-center text-gray-300">
+                  Select two pins on the map
+                </div>
+              </div>
+            )}
 
-            <button className="btn btn-warning text-white" onClick={() => clear()}>
+            <button
+              className="btn btn-warning text-white"
+              onClick={() => clear()}
+            >
               Clear Pins
             </button>
 
-            <button className="btn btn-outline text-white" onClick={() => clearRoute()}>
+            <button
+              className="btn btn-outline text-white"
+              onClick={() => clearRoute()}
+            >
               Clear Route
             </button>
           </div>
         </section>
 
         <section>
-          <div className="font-semibold mb-2 text-gray-100">Selection</div>
-          <div className="text-sm text-gray-300">{pins.length} pins on board</div>
+          <div className="font-semibold mb-2 text-gray-100">Total Pins</div>
+          <div className="text-sm text-gray-300">
+            {pins.length} pins on board
+          </div>
         </section>
 
         <section>
           <div className="font-semibold mb-2 text-gray-100">Shortcuts</div>
           <div className="flex gap-2">
-            <button className="btn btn-ghost btn-sm text-white">Reset View</button>
+            <button className="btn btn-ghost btn-sm text-white">
+              Reset View
+            </button>
             <button className="btn btn-ghost btn-sm text-white">Center</button>
           </div>
         </section>
