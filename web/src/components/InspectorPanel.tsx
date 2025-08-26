@@ -94,12 +94,19 @@ export default function InspectorPanel({ map }: { map?: MapboxMap | null }) {
     if (pins.length < 2) return;
     setSelectedIds([]);
     setIsSelectingRoute(true);
+    // notify other UI that we're entering route-selection mode
+    try {
+      window.dispatchEvent(new CustomEvent("route-selection-start"));
+    } catch (e) {}
   };
 
   const cancelRouteSelection = () => {
     setIsSelectingRoute(false);
     setSelectedIds([]);
     select(null);
+    try {
+      window.dispatchEvent(new CustomEvent("route-selection-end"));
+    } catch (e) {}
   };
 
   // Watch the global selected pin id (set by clicking pins on the map). When in selection
@@ -138,6 +145,9 @@ export default function InspectorPanel({ map }: { map?: MapboxMap | null }) {
         // cleanup selection mode and clear map selection
         setIsSelectingRoute(false);
         select(null);
+        try {
+          window.dispatchEvent(new CustomEvent("route-selection-end"));
+        } catch (e) {}
         return [];
       }
       return next;
