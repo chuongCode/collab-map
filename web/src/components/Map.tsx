@@ -8,7 +8,7 @@ import { useSocket } from "../hooks/useSocket";
 import { Notification } from "./Notification";
 import PinLayer from "./PinLayer";
 import InspectorPanel from "./InspectorPanel";
-import PinList from "./PinList";
+import LeftPinPanel from "./LeftPinPanel";
 import { fetchRouteGeoJSON } from "../lib/route";
 import { usePinsActions } from "../hooks/usePins";
 
@@ -160,9 +160,7 @@ export default function Map() {
       <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />
       <PinLayer map={mapObj} />
       <InspectorPanel map={mapObj} />
-      <div className="fixed left-4 top-16 z-50">
-        <PinList map={mapObj} />
-      </div>
+      <LeftPinPanel map={mapObj} />
       {notification && (
         <Notification
           message={notification.message}
