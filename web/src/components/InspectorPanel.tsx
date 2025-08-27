@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchRouteGeoJSON } from "../lib/route";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { usePinsActions, usePinsState } from "../hooks/usePins";
+import InspectorControls from "./InspectorControls";
 
 export default function InspectorPanel({ map }: { map?: MapboxMap | null }) {
   const { add, clear, clearRoute, setRoute, select } = usePinsActions();
@@ -226,75 +227,16 @@ export default function InspectorPanel({ map }: { map?: MapboxMap | null }) {
         </div>
       </div>
 
-      <div
-        className="p-4 space-y-4 overflow-auto text-gray-200"
-        style={{ maxHeight: "calc(100vh - 64px)" }}
-      >
-        <section>
-          <div className="flex flex-col gap-2">
-            <button
-              className={`btn ${
-                isPlacing ? "btn-success" : "btn-outline"
-              } text-white`}
-              onClick={togglePinPlacement}
-            >
-              {isPlacing ? "Placing: Click map" : "Add Pin"}
-            </button>
-
-            {!isSelectingRoute ? (
-              <button
-                className="btn btn-accent text-white"
-                onClick={startRouteSelection}
-              >
-                Route (select 2)
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                <button
-                  className="btn btn-primary text-white"
-                  onClick={cancelRouteSelection}
-                >
-                  Cancel
-                </button>
-                <div className="text-sm self-center text-gray-300">
-                  Select two pins on the map
-                </div>
-              </div>
-            )}
-
-            <button
-              className="btn btn-warning text-white"
-              onClick={() => clear()}
-            >
-              Clear Pins
-            </button>
-
-            <button
-              className="btn btn-outline text-white"
-              onClick={() => clearRoute()}
-            >
-              Clear Route
-            </button>
-          </div>
-        </section>
-
-        <section>
-          <div className="font-semibold mb-2 text-gray-100">Total Pins</div>
-          <div className="text-sm text-gray-300">
-            {pins.length} pins on board
-          </div>
-        </section>
-
-        <section>
-          <div className="font-semibold mb-2 text-gray-100">Shortcuts</div>
-          <div className="flex gap-2">
-            <button className="btn btn-ghost btn-sm text-white">
-              Reset View
-            </button>
-            <button className="btn btn-ghost btn-sm text-white">Center</button>
-          </div>
-        </section>
-      </div>
+      <InspectorControls
+        isPlacing={isPlacing}
+        togglePinPlacement={togglePinPlacement}
+        isSelectingRoute={isSelectingRoute}
+        startRouteSelection={startRouteSelection}
+        cancelRouteSelection={cancelRouteSelection}
+        clearPins={() => clear()}
+        clearRoute={() => clearRoute()}
+        pinsCount={pins.length}
+      />
     </aside>
   );
 }
