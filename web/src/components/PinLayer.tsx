@@ -2,12 +2,12 @@ import { useEffect, useRef } from "react";
 // using `any` for map types here to keep file simple and avoid type import issues
 import { usePinsState, usePinsActions } from "../hooks/usePins";
 import type { Pin } from "../types";
-import pinUrl from "../assets/Map pin.svg";
+// pinUrl moved to centralized initialization in useMapboxMap
 
 const PINS_SOURCE_ID = "pins";
 const ROUTE_SOURCE_ID = "route";
 const PINS_LAYER_ID = "pins-layer";
-const ROUTE_LAYER_ID = "route-layer";
+// Initialization of sources/layers/images moved to `useMapboxMap` to centralize and avoid races.
 
 export default function PinLayer({ map }: { map?: any | null }) {
   const { pins, selectedId, route } = usePinsState();
@@ -15,160 +15,6 @@ export default function PinLayer({ map }: { map?: any | null }) {
   const draggingRef = useRef<{ id: string; start: [number, number] } | null>(
     null
   );
-
-  // Initialize sources and layers once
-  useEffect(() => {
-    if (!map) return;
-
-    const init = () => {
-      try {
-        if (!map.getSource(PINS_SOURCE_ID)) {
-          map.addSource(PINS_SOURCE_ID, {
-            type: "geojson",
-            data: { type: "FeatureCollection", features: [] },
-          });
-        }
-
-        if (!map.getLayer(PINS_LAYER_ID)) {
-          // Try to load a custom SVG image and add it as an icon
-          try {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.onload = () => {
-              try {
-                // addImage accepts HTMLImageElement; add as SDF so we can tint it per-feature via 'icon-color'
-                map.addImage("custom-pin", img, { sdf: true });
-              } catch (err) {
-                // ignore (image might already exist)
-              }
-
-              // add the symbol layer using the custom SDF image and paint with per-feature color
-              try {
-                map.addLayer({
-                  id: PINS_LAYER_ID,
-                  type: "symbol",
-                  source: PINS_SOURCE_ID,
-                  layout: {
-                    "icon-image": "custom-pin",
-                    // shrink the icon so it fits the map better
-                    "icon-size": 0.6,
-                    "icon-allow-overlap": true,
-                    "icon-ignore-placement": true,
-                    "icon-anchor": "bottom",
-                  },
-                  paint: {
-                    // use the feature's `color` property, defaulting to a neutral dark color
-                    "icon-color": ["coalesce", ["get", "color"], "#222"],
-                  },
-                });
-                // add a small white circle on top of the symbol to recreate the SVG's inner white hole
-                try {
-                  if (!map.getLayer("pins-hole")) {
-                    map.addLayer({
-                      id: "pins-hole",
-                      type: "circle",
-                      source: PINS_SOURCE_ID,
-                      paint: {
-                        "circle-color": "#fff",
-                        "circle-radius": 5,
-                        "circle-stroke-color": "rgba(0,0,0,0.08)",
-                        "circle-stroke-width": 1,
-                        // translate upward so the hole aligns with the visual center of the pin icon (pixels)
-                        "circle-translate": [0, -20],
-                        "circle-translate-anchor": "viewport",
-                      },
-                    });
-                  }
-                } catch (err) {
-                  // ignore
-                }
-              } catch (err) {
-                // fallback to marker if adding symbol fails
-                try {
-                  map.addLayer({
-                    id: PINS_LAYER_ID,
-                    type: "symbol",
-                    source: PINS_SOURCE_ID,
-                    layout: {
-                      "icon-image": "marker-15",
-                      "icon-size": 1.2,
-                      "icon-allow-overlap": true,
-                      "icon-anchor": "bottom",
-                    },
-                    paint: {},
-                  });
-                } catch (e) {
-                  // ignore
-                }
-              }
-            };
-            img.onerror = () => {
-              // fallback to default marker if image fails to load
-              try {
-                map.addLayer({
-                  id: PINS_LAYER_ID,
-                  type: "symbol",
-                  source: PINS_SOURCE_ID,
-                  layout: {
-                    "icon-image": "marker-15",
-                    "icon-size": 1.2,
-                    "icon-allow-overlap": true,
-                    "icon-anchor": "bottom",
-                  },
-                  paint: {},
-                });
-              } catch (e) {}
-            };
-            img.src = pinUrl as string;
-          } catch (err) {
-            // symbol may fail if sprite not available; ignore
-          }
-        }
-
-        if (!map.getSource(ROUTE_SOURCE_ID)) {
-          map.addSource(ROUTE_SOURCE_ID, {
-            type: "geojson",
-            data: { type: "FeatureCollection", features: [] },
-          });
-        }
-
-        if (!map.getLayer(ROUTE_LAYER_ID)) {
-          map.addLayer({
-            id: ROUTE_LAYER_ID,
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            paint: {
-              "line-color": "#ff7e5f",
-              "line-width": 4,
-            },
-          });
-        }
-      } catch (err) {
-        // init may fail if style not ready; ignore and rely on load/styledata listeners
-      }
-    };
-
-    // If style is ready, init now, otherwise wait for load
-    try {
-      if (typeof map.isStyleLoaded === "function") {
-        if (map.isStyleLoaded()) init();
-        else map.once("load", init);
-      } else {
-        // conservative: attach to load
-        map.once("load", init);
-      }
-    } catch (err) {
-      map.once("load", init);
-    }
-
-    // Ensure re-init after style changes
-    const onStyle = () => init();
-    map.on("styledata", onStyle);
-
-    return () => {
-      map.off("styledata", onStyle);
-    };
-  }, [map]);
 
   // Sync pins data to map source
   useEffect(() => {
@@ -296,10 +142,8 @@ export default function PinLayer({ map }: { map?: any | null }) {
     const highlightLayerId = "pins-highlight";
     try {
       // Only try to add the layer when the style is ready
-      if (
-        (typeof map.isStyleLoaded === "function" && map.isStyleLoaded()) ||
-        true
-      ) {
+      const addHighlight = () => {
+        if (!map) return;
         if (!map.getLayer(highlightLayerId)) {
           try {
             map.addLayer({
@@ -321,20 +165,32 @@ export default function PinLayer({ map }: { map?: any | null }) {
               "PinLayer: failed to add highlight layer, will try later",
               err
             );
+            return;
           }
         }
 
-        const layer = map.getLayer(highlightLayerId);
-        if (layer) {
-          try {
-            const filter = selectedId
-              ? ["==", ["get", "_id"], selectedId]
-              : ["==", ["get", "_id"], ""];
-            // @ts-ignore
-            map.setFilter(highlightLayerId, filter);
-          } catch (err) {
-            // ignore setFilter errors
-          }
+        try {
+          const filter = selectedId
+            ? ["==", ["get", "_id"], selectedId]
+            : ["==", ["get", "_id"], ""];
+          // @ts-ignore
+          map.setFilter(highlightLayerId, filter);
+        } catch (err) {
+          // ignore setFilter errors
+        }
+      };
+
+      try {
+        if (typeof map.isStyleLoaded === "function" && !map.isStyleLoaded()) {
+          map.once("load", addHighlight);
+        } else {
+          addHighlight();
+        }
+      } catch (err) {
+        try {
+          map.once("load", addHighlight);
+        } catch (e) {
+          // swallow
         }
       }
     } catch (err) {
