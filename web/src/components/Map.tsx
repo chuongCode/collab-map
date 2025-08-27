@@ -159,7 +159,11 @@ export default function Map() {
     <>
       <div ref={containerRef} style={{ width: "100%", height: "100vh" }} />
       <PinLayer map={mapObj} />
-      <InspectorPanel map={mapObj} users={userList} />
+      <InspectorPanel
+        map={mapObj}
+        users={userList}
+        currentUserId={clientUser.id}
+      />
       <LeftPinPanel map={mapObj} />
       {notification && (
         <Notification

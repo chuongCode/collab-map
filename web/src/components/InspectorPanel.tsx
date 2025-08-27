@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { fetchRouteGeoJSON } from "../lib/route";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { usePinsActions, usePinsState } from "../hooks/usePins";
 import InspectorControls from "./InspectorControls";
+import UserListDropdown from "./UserListDropdown";
 
 export default function InspectorPanel({
   map,
   users,
+  currentUserId,
 }: {
   map?: MapboxMap | null;
   users?: Array<{
@@ -15,6 +17,7 @@ export default function InspectorPanel({
     initials?: string;
     color?: string;
   }>;
+  currentUserId?: string;
 }) {
   const { add, clear, clearRoute, setRoute, select } = usePinsActions();
   const { pins, selectedId } = usePinsState();
@@ -22,7 +25,10 @@ export default function InspectorPanel({
   const [isPlacing, setIsPlacing] = useState(false);
   const [isSelectingRoute, setIsSelectingRoute] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [userListOpen, setUserListOpen] = useState(false);
+  const userListRef = useRef<HTMLDivElement | null>(null);
+
+  // user list dropdown is now a separate component (handles its own open/close and
+  // scroll-to-current behavior). userListRef remains for any external needs.
 
   const MIN_WIDTH = 240;
   const DEFAULT_WIDTH = 320;
@@ -215,66 +221,14 @@ export default function InspectorPanel({
         style={{ paddingRight: 8 }}
       >
         <div>
-          <div className="relative">
-            {/* Combined avatar + chevron trigger; highlight container on hover */}
-            <button
-              onClick={() => setUserListOpen((s) => !s)}
-              aria-haspopup="menu"
-              aria-expanded={userListOpen}
-              className="flex items-center gap-2 p-1 rounded group hover:bg-[#3a3a3a] transition-colors"
-            >
-              <div className="flex -space-x-2">
-                {(users || []).slice(0, 4).map((u) => (
-                  <div
-                    key={u.id}
-                    title={u.name || u.initials}
-                    className="w-7 h-7 rounded-full border-2 border-[#2c2c2c] flex items-center justify-center text-xs font-semibold text-white"
-                    style={{ backgroundColor: u.color || "#333" }}
-                  >
-                    {u.initials ? u.initials[0] : (u.name || "?").charAt(0)}
-                  </div>
-                ))}
-              </div>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-4 h-4 text-gray-200"
-                aria-hidden
-              >
-                <path d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {userListOpen && (
-              <div className="absolute left-0 mt-2 w-56 bg-[#1e1e1e] border border-gray-700 rounded shadow-lg z-60">
-                <div className="p-2">
-                  {(users || []).length === 0 && (
-                    <div className="text-gray-400 text-sm">No users</div>
-                  )}
-                  {(users || []).map((u) => (
-                    <div
-                      key={u.id}
-                      className="flex items-center gap-2 py-1 px-2 hover:bg-[#3a3a3a] rounded"
-                    >
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white"
-                        style={{ backgroundColor: u.color || "#333" }}
-                      >
-                        {u.initials ? u.initials[0] : (u.name || "?").charAt(0)}
-                      </div>
-                      <div className="text-sm text-gray-100">
-                        {u.name || u.initials || u.id}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* extracted user list dropdown */}
+          <div ref={userListRef}>
+            <UserListDropdown
+              users={users}
+              currentUserId={currentUserId}
+              onOpen={() => {}}
+              onClose={() => {}}
+            />
           </div>
         </div>
 
