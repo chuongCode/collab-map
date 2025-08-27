@@ -39,6 +39,7 @@ export default function InspectorControls({
             <button
               className="btn btn-accent text-white"
               onClick={startRouteSelection}
+              style={{ backgroundColor: "#039855" }}
             >
               Route (select 2)
             </button>
@@ -56,7 +57,11 @@ export default function InspectorControls({
             </div>
           )}
 
-          <button className="btn btn-warning text-white" onClick={clearPins}>
+          <button
+            className="btn btn-warning text-white"
+            onClick={clearPins}
+            style={{ backgroundColor: "#DC6803" }}
+          >
             Clear Pins
           </button>
 

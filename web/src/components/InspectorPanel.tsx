@@ -9,6 +9,7 @@ export default function InspectorPanel({
   map,
   users,
   currentUserId,
+  onFocusUser,
 }: {
   map?: MapboxMap | null;
   users?: Array<{
@@ -18,6 +19,7 @@ export default function InspectorPanel({
     color?: string;
   }>;
   currentUserId?: string;
+  onFocusUser?: (id?: string) => void;
 }) {
   const { add, clear, clearRoute, setRoute, select } = usePinsActions();
   const { pins, selectedId } = usePinsState();
@@ -228,6 +230,11 @@ export default function InspectorPanel({
               currentUserId={currentUserId}
               onOpen={() => {}}
               onClose={() => {}}
+              onUserClick={(id?: string) => {
+                // ignore clicks on self
+                if (!id || id === currentUserId) return;
+                onFocusUser?.(id);
+              }}
             />
           </div>
         </div>
@@ -269,5 +276,3 @@ export default function InspectorPanel({
     </aside>
   );
 }
-
-// UserListDropdown was inlined above; no separate component required

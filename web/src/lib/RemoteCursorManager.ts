@@ -23,6 +23,23 @@ export class RemoteCursorManager {
     this.map = map;
   }
 
+  // Return the last known lng/lat for a remote session id, or undefined
+  getLastLngLatForSid(sid?: string): [number, number] | undefined {
+    if (!sid) return undefined;
+    const m = this.markers[sid];
+    return m ? m.lastLngLat : undefined;
+  }
+
+  // Return the last known lng/lat for a user id (user.id), searching markers' user field
+  getLastLngLatForUserId(userId?: string): [number, number] | undefined {
+    if (!userId) return undefined;
+    for (const k of Object.keys(this.markers)) {
+      const m = this.markers[k];
+      if (m.user && (m.user as any).id === userId) return m.lastLngLat;
+    }
+    return undefined;
+  }
+
   attach(socket: SocketLike) {
     const onCursor = (ev: CursorEvent & { color?: string }) => {
       if (ev.sid && socket.id && ev.sid === socket.id) return; // ignore self

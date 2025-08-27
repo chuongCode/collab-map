@@ -65,9 +65,10 @@ export default function Map() {
 
     const socket = socketRef.current;
 
-    // Attach RemoteCursorManager (now only relays, does not assign colors)
     const cursorManager = new RemoteCursorManager(mapRef.current);
     cursorManager.attach(socket);
+
+    (mapRef as any).__cursorManager = cursorManager;
 
     // On connect, join board
     socket.on("connect", () => {
@@ -128,8 +129,42 @@ export default function Map() {
       socket.off("user_joined");
       socket.off("user_left");
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId, clientUser, mapRef, socketRef]);
+
+  // focus a remote user's last known cursor position
+  const focusUserById = (sid?: string) => {
+    try {
+      const cm: any = (mapRef as any).__cursorManager;
+      console.debug(
+        "focusUserById: cursorManager:",
+        !!cm,
+        "hasMethod:",
+        !!cm?.getLastLngLatForUserId
+      );
+      let lnglat: [number, number] | undefined =
+        cm?.getLastLngLatForUserId(sid);
+      if (!lnglat) {
+        // fallback: maybe `sid` is actually a socket sid stored as marker key
+        lnglat = cm?.getLastLngLatForSid?.(sid);
+      }
+      console.debug(
+        "focusUserById: resolved lnglat:",
+        lnglat,
+        "for id/sid:",
+        sid
+      );
+      if (lnglat && mapRef.current) {
+        mapRef.current.easeTo({ center: lnglat, duration: 500 });
+        return;
+      }
+      // if we reach here, no known cursor location
+      console.debug("focusUserById: no known cursor for", sid);
+      setNotification({
+        message: "No recent cursor position for that user.",
+        color: "#666",
+      });
+    } catch (e) {}
+  };
 
   // Listen for route requests from UI
   useEffect(() => {
@@ -163,6 +198,7 @@ export default function Map() {
         map={mapObj}
         users={userList}
         currentUserId={clientUser.id}
+        onFocusUser={(id?: string) => focusUserById(id)}
       />
       <LeftPinPanel map={mapObj} />
       {notification && (

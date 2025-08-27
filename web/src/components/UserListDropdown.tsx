@@ -13,12 +13,14 @@ export default function UserListDropdown({
   maxVisible = 4,
   onOpen,
   onClose,
+  onUserClick,
 }: {
   users?: User[];
   currentUserId?: string;
   maxVisible?: number;
   onOpen?: () => void;
   onClose?: () => void;
+  onUserClick?: (id?: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -111,7 +113,13 @@ export default function UserListDropdown({
               return (
                 <div
                   key={u.id}
-                  className={`flex items-center gap-2 py-1 px-2 hover:bg-[#3a3a3a] rounded`}
+                  onClick={() => {
+                    onUserClick?.(u.id);
+                    // close after click
+                    setOpen(false);
+                    onClose?.();
+                  }}
+                  className={`flex items-center gap-2 py-1 px-2 hover:bg-[#3a3a3a] rounded cursor-pointer`}
                   data-user-id={u.id}
                 >
                   <div
