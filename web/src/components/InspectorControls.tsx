@@ -44,17 +44,13 @@ export default function InspectorControls({
               Route (select 2)
             </button>
           ) : (
-            <div className="flex gap-2">
-              <button
-                className="btn btn-primary text-white"
-                onClick={cancelRouteSelection}
-              >
-                Cancel
-              </button>
-              <div className="text-sm self-center text-gray-300">
-                Select two pins on the map
-              </div>
-            </div>
+            <button
+              className="btn text-white"
+              onClick={cancelRouteSelection}
+              style={{ backgroundColor: "#039855" }}
+            >
+              Cancel (Select two pins on the map)
+            </button>
           )}
 
           <button
