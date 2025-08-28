@@ -30,3 +30,5 @@ npm run dev
 ```
 
 Open `http://localhost:5173` in two browser windows; move the mouse in one and you should see a small initials marker in the other.
+
+In memory of Matt Fortes 💔
