@@ -11,6 +11,7 @@ import InspectorPanel from "./InspectorPanel";
 import LeftPinPanel from "./LeftPinPanel";
 import { fetchRouteGeoJSON } from "../lib/route";
 import { usePinsActions } from "../hooks/usePins";
+import usePins from "../hooks/usePins";
 
 const MAP_STYLE = import.meta.env.VITE_MAP_STYLE as string;
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
@@ -49,6 +50,7 @@ export default function Map() {
   }, [userList]);
 
   const { setRoute } = usePinsActions();
+  const addPin = usePins((s) => s.addPin);
 
   // Keep a stateful reference to the map so child components re-render when the map is created
   const [mapObj, setMapObj] = useState<mapboxgl.Map | null>(null);
@@ -73,6 +75,24 @@ export default function Map() {
     // On connect, join board
     socket.on("connect", () => {
       socket.emit("join_board", { boardId, user: clientUser });
+      // Fetch existing pins after joining
+      fetch("http://localhost:8000/pins/")
+        .then((r) => r.json())
+        .then((list) => {
+          console.debug("GET /pins returned", list);
+          if (!Array.isArray(list)) return;
+          for (const p of list) {
+            // server pin shape: { id, lat, lng, title, created_by, color_snapshot, created_at }
+            // map to client Pin type
+            addPin({
+              id: p.id,
+              title: p.title,
+              coordinates: [p.lng, p.lat],
+              color: p.color_snapshot || undefined,
+            });
+          }
+        })
+        .catch(() => {});
     });
 
     // Listen for user list updates
@@ -84,6 +104,36 @@ export default function Map() {
         // @ts-ignore
         window.__CLIENT_COLOR = me?.color;
       } catch (e) {}
+    });
+
+    // Listen for pins created by others
+    socket.on("pin_created", (payload: any) => {
+      console.debug("socket pin_created", payload);
+      try {
+        const p = payload?.pin;
+        if (!p || !p.id) return;
+        // dedupe by id
+        const state = usePins.getState();
+        if (state.pins.find((x) => x.id === p.id)) return;
+        addPin({
+          id: p.id,
+          title: p.title,
+          coordinates: [p.lng, p.lat],
+          color: p.color_snapshot || undefined,
+        });
+      } catch (e) {}
+    });
+
+    // Listen for server-side cleared pins
+    socket.on("pins_cleared", (payload: any) => {
+      try {
+        console.debug("socket pins_cleared", payload);
+        // clear local store
+        usePins.getState().clearPins();
+        usePins.getState().clearRoute();
+      } catch (e) {
+        // swallow
+      }
     });
 
     // Listen for join/leave notifications (use userList for color)
@@ -128,6 +178,7 @@ export default function Map() {
       socket.off("user_list");
       socket.off("user_joined");
       socket.off("user_left");
+      socket.off("pin_created");
     };
   }, [boardId, clientUser, mapRef, socketRef]);
 

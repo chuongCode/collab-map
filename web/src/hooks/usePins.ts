@@ -26,8 +26,16 @@ const usePins = create<PinsState>((set: any, get: any) => ({
       coordinates: pin.coordinates,
       color: (pin as any).color,
     };
-    set((s: any) => ({ pins: [...s.pins, newPin] }));
-    // debug log removed
+    set((s: any) => {
+      // if a pin with this id already exists, update it instead of appending to avoid duplicates
+      const exists = s.pins.find((p: any) => p.id === id);
+      if (exists) {
+        return {
+          pins: s.pins.map((p: any) => (p.id === id ? { ...p, ...newPin } : p)),
+        };
+      }
+      return { pins: [...s.pins, newPin] };
+    });
     return newPin;
   },
   updatePin: (id, patch) =>

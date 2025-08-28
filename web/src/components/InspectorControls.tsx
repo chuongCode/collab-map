@@ -55,7 +55,13 @@ export default function InspectorControls({
 
           <button
             className="btn btn-warning text-white"
-            onClick={clearPins}
+            onClick={async () => {
+              try {
+                await (clearPins as any)();
+              } catch (e) {
+                // swallow
+              }
+            }}
             style={{ backgroundColor: "#DC6803" }}
           >
             Clear Pins

@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.sockets.board import register_board_handlers
+from app.database import create_tables
+from app.routes import pins as pins_router
 
 # ALLOWED_ORIGINS restricts which browser origins can call the HTTP routes and open Socket.IO connections.
 ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "*"]
@@ -44,3 +46,13 @@ async def health() -> Dict[str, str]:
 app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)
 
 register_board_handlers(sio)
+
+# Ensure DB tables exist (safe for dev/test). Move after app creation so DB prints occur during startup.
+try:
+    create_tables()
+except Exception:
+    # ignore DB create errors at import time; they will show in logs if problematic
+    pass
+
+# Register pins routes
+fastapi_app.include_router(pins_router.router)

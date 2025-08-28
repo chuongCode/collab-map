@@ -12,3 +12,12 @@ __pycache__/
 
 # Local env files (tokens/keys)
 .env
+
+# Local sqlite dev DB
+/api/dev.db
+
+# Node/JS artifacts
+node_modules/
+
+# local virtualenvs
+/.venv

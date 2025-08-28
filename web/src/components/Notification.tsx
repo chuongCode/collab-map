@@ -1,3 +1,4 @@
+// Will probably substitute for something like hot-toast soon
 import { useEffect, useRef, useState } from "react";
 import "../styles/notification.css";
 

@@ -85,13 +85,50 @@ export default function InspectorPanel({
     const prevCursor = canvas.style.cursor;
     canvas.style.cursor = "crosshair";
 
-    const onMapClick = (e: any) => {
+    const onMapClick = async (e: any) => {
       const lng = e.lngLat.lng;
       const lat = e.lngLat.lat;
       const color = (window as any).__CLIENT_COLOR as string | undefined;
-      const created = add({ title: "Pin", coordinates: [lng, lat], color });
-      if (map && created)
-        map.easeTo({ center: created.coordinates, duration: 400 });
+
+      // Try to persist to server first so canonical id/timestamp are created and broadcast
+      try {
+        const payload = {
+          lat,
+          lng,
+          title: "Pin",
+          created_by: currentUserId || crypto.randomUUID(),
+          color_snapshot: color || undefined,
+        };
+        console.debug("POST /pins payload", payload);
+        const resp = await fetch("http://localhost:8000/pins/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (resp.ok) {
+          const p = await resp.json();
+          console.debug("POST /pins response", p);
+          // server returns canonical pin: { id, lat, lng, title, created_by, color_snapshot }
+          add({
+            id: p.id,
+            title: p.title,
+            coordinates: [p.lng, p.lat],
+            color: p.color_snapshot || undefined,
+          });
+          if (map) map.easeTo({ center: [p.lng, p.lat] as any, duration: 400 });
+          setIsPlacing(false);
+          return;
+        }
+      } catch (err) {
+        // swallow and fallback to optimistic local add
+      }
+
+      // Fallback: optimistic local add if server persist failed
+      try {
+        const created = add({ title: "Pin", coordinates: [lng, lat], color });
+        if (map && created)
+          map.easeTo({ center: created.coordinates, duration: 400 });
+      } catch (e) {}
       setIsPlacing(false);
     };
 
@@ -269,7 +306,27 @@ export default function InspectorPanel({
         isSelectingRoute={isSelectingRoute}
         startRouteSelection={startRouteSelection}
         cancelRouteSelection={cancelRouteSelection}
-        clearPins={() => clear()}
+        clearPins={async () => {
+          try {
+            console.debug("DELETE /pins/ called - Debug log added for clarity");
+            const resp = await fetch("http://localhost:8000/pins/", {
+              method: "DELETE",
+            });
+            if (resp.ok || resp.status === 204) {
+              console.debug("DELETE /pins/ succeeded");
+              clear();
+              clearRoute();
+            } else {
+              console.debug("DELETE /pins/ failed, clearing locally");
+              clear();
+              clearRoute();
+            }
+          } catch (e) {
+            console.debug("DELETE /pins/ error, clearing locally", e);
+            clear();
+            clearRoute();
+          }
+        }}
         clearRoute={() => clearRoute()}
         pinsCount={pins.length}
       />
