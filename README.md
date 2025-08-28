@@ -1,8 +1,8 @@
-## Live cursors: FastAPI + Socket.IO + Mapbox GL JS
+## Premise
 
-This project includes a tiny FastAPI + Socket.IO server and a React client that renders other users' cursors on a Mapbox map.
+This is supposed to be some sort of collaborative platform for you to plot on a map together with your friends. TBD.
 
-### Prereqs
+### Running this on local Prereqs:
 
 - Mapbox token (`VITE_MAPBOX_TOKEN`) and a map style URL (`VITE_MAP_STYLE`)
 - Node 18+ and Python 3.10+
@@ -28,7 +28,5 @@ echo VITE_MAPBOX_TOKEN=your_token_here > .env
 echo VITE_MAP_STYLE=mapbox://styles/mapbox/streets-v12 >> .env
 npm run dev
 ```
-
-Open `http://localhost:5173` in two browser windows; move the mouse in one and you should see a small initials marker in the other.
 
 In memory of Matt Fortes 💔
