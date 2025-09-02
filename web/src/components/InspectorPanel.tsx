@@ -278,6 +278,16 @@ export default function InspectorPanel({
 
         <div className="flex items-center gap-2">
           <button
+            className="btn btn-sm text-white px-4 py-2 bg-blue-500 hover:bg-blue-700 border border-transparent font-medium"
+            onClick={() => {}}
+            aria-label="Share"
+            title="Share"
+            type="button"
+          >
+            Share
+          </button>
+
+          <button
             className="btn btn-ghost btn-sm text-white p-2"
             onClick={() => setIsOpen(false)}
             aria-label="Collapse Panel"
