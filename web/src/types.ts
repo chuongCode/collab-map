@@ -2,6 +2,7 @@ export type LiveUser = {
   id: string;
   name?: string;
   initials?: string;
+  picture?: string;
 };
 // Extend LiveUser to include color (from server)
 export type LiveUserWithColor = LiveUser & { color?: string };

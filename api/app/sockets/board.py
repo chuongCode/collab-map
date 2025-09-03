@@ -1,5 +1,9 @@
 from typing import Dict, Any, Optional
 import random
+import os
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as grequests
 
 
 # ---- In-memory board state ----
@@ -22,7 +26,26 @@ def register_board_handlers(sio):
     @sio.event
     async def connect(sid: str, environ: Dict[str, Any], auth: Optional[Dict[str, Any]]):
         # Client connects; no room yet until join_board
-        pass
+        # Optionally accept an auth dict containing {'id_token': '<google id token>'}
+        user = None
+        try:
+            if auth and isinstance(auth, dict):
+                token = auth.get("id_token")
+                if token:
+                    audience = os.environ.get('GOOGLE_CLIENT_ID')
+                    info = id_token.verify_oauth2_token(token, grequests.Request(), audience)
+                    user_id = info.get('sub')
+                    name = info.get('name') or info.get('email') or 'Unknown'
+                    initials = ''.join([part[0] for part in name.split() if part])[:2].upper()
+                    picture = info.get('picture')
+                    user = {"id": user_id, "name": name, "initials": initials, "email": info.get('email'), "picture": picture}
+        except Exception:
+            # invalid token -> ignore and continue as guest
+            user = None
+
+        if user:
+            # store a minimal session now so join_board may rely on it
+            await sio.save_session(sid, {"user": user})
 
 
     @sio.event
@@ -61,8 +84,18 @@ def register_board_handlers(sio):
         Expected data: { boardId: str, user: { id: str, name?: str, initials?: str } }
         """
         board_id = (data or {}).get("boardId")
-        user = (data or {}).get("user")
+        payload_user = (data or {}).get("user")
+
+        # If the connect handler verified an id_token and stored a session user, prefer that
+        try:
+            session = await sio.get_session(sid)
+        except KeyError:
+            session = {}
+        session_user = (session or {}).get("user")
+
+        user = session_user or payload_user
         user_id = (user or {}).get("id")
+
         if not board_id or not user_id:
             await sio.emit("error", {"message": "boardId and user.id required"}, to=sid)
             return
@@ -84,7 +117,7 @@ def register_board_handlers(sio):
         # Inform others in the room that a new user joined
         await sio.emit(
             "user_joined",
-            {"sid": sid, "user": {**user, "color": color}},
+            {"sid": sid, "user": {**(user or {}), "color": color}},
             room=board_id,
             skip_sid=sid,
         )

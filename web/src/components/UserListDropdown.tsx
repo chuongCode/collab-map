@@ -5,6 +5,7 @@ type User = {
   name?: string;
   initials?: string;
   color?: string;
+  picture?: string;
 };
 
 export default function UserListDropdown({
@@ -83,7 +84,17 @@ export default function UserListDropdown({
               className="w-7 h-7 rounded-full border-2 border-[#2c2c2c] flex items-center justify-center text-xs font-semibold text-white"
               style={{ backgroundColor: u.color || "#333" }}
             >
-              {u.initials ? u.initials[0] : (u.name || "?").charAt(0)}
+              {u.picture ? (
+                <img
+                  src={u.picture}
+                  alt={u.name || u.initials}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : u.initials ? (
+                u.initials[0]
+              ) : (
+                (u.name || "?").charAt(0)
+              )}
             </div>
           ))}
         </div>
@@ -126,7 +137,17 @@ export default function UserListDropdown({
                     className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white"
                     style={{ backgroundColor: u.color || "#333" }}
                   >
-                    {u.initials ? u.initials[0] : (u.name || "?").charAt(0)}
+                    {u.picture ? (
+                      <img
+                        src={u.picture}
+                        alt={u.name || u.initials}
+                        className="w-7 h-7 rounded-full object-cover"
+                      />
+                    ) : u.initials ? (
+                      u.initials[0]
+                    ) : (
+                      (u.name || "?").charAt(0)
+                    )}
                   </div>
                   <div className="text-sm text-gray-100">
                     {u.name || u.initials || u.id}{" "}

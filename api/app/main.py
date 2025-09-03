@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.sockets.board import register_board_handlers
+from app.routes import auth as auth_routes
 
 # ALLOWED_ORIGINS restricts which browser origins can call the HTTP routes and open Socket.IO connections.
 ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "*"]
@@ -29,6 +30,9 @@ fastapi_app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register API routes
+fastapi_app.include_router(auth_routes.router)
 
 # Designating a quick way to verify if the app is up
 # Curl http://localhost:8000/health or open in a browser.

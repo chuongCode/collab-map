@@ -273,6 +273,22 @@ export default function InspectorPanel({
         clearRoute={() => clearRoute()}
         pinsCount={pins.length}
       />
+      {/* Sign out button bottom-right */}
+      <div className="absolute bottom-4 right-4">
+        <button
+          className="btn btn-sm btn-ghost text-white"
+          onClick={() => {
+            // clear stored user and reload to show login
+            try {
+              localStorage.removeItem("collab_user");
+            } catch (e) {}
+            // force reload so app shows login
+            window.location.reload();
+          }}
+        >
+          Sign out
+        </button>
+      </div>
     </aside>
   );
 }

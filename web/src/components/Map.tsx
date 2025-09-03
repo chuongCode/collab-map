@@ -17,16 +17,23 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
 export default function Map() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [clientUser] = useState<LiveUser>({
+  // Build clientUser from stored auth if present, otherwise a temporary anonymous user
+  const stored =
+    typeof window !== "undefined" ? localStorage.getItem("collab_user") : null;
+  const parsed = stored ? JSON.parse(stored) : null;
+  try {
+    console.debug("stored collab_user", parsed?.user);
+  } catch (e) {}
+  const initialUser = parsed?.user ?? {
     id: crypto.randomUUID(),
     initials: "YY",
-  });
+  };
+  const [clientUser] = useState<LiveUser>(initialUser);
   const boardId = useMemo(() => "demo-board-1", []);
   const socketRef = useSocket("http://localhost:8000", {
     transports: ["websocket"],
+    auth: { id_token: parsed?.id_token },
   });
-
-  // legacy notification state removed — using react-hot-toast instead
 
   // User list state (from server)
   const [userList, setUserList] = useState<LiveUserWithColor[]>([]);
@@ -73,6 +80,10 @@ export default function Map() {
 
     // Listen for user list updates
     socket.on("user_list", (payload: { users: LiveUserWithColor[] }) => {
+      // debug: log incoming user list to verify picture field
+      try {
+        console.debug("socket user_list", payload);
+      } catch (e) {}
       setUserList(payload.users || []);
       // try to find our client user and expose color to other UI (PinControls)
       try {
@@ -87,13 +98,17 @@ export default function Map() {
       "user_joined",
       (payload: { sid: string; user: LiveUserWithColor }) => {
         const { user } = payload;
+        try {
+          // eslint-disable-next-line no-console
+          console.debug("socket user_joined", user);
+        } catch (e) {}
         if (user.id !== clientUser.id) {
           toast(`${user.initials} has joined the board!`, {
             duration: 3000,
             // use an inset left accent so the pill stays rounded
             style: {
               boxShadow: `inset 6px 0 0 0 ${user.color || "#222"}`,
-              paddingLeft: '12px',
+              paddingLeft: "12px",
             },
           });
         }
@@ -108,7 +123,7 @@ export default function Map() {
             duration: 3000,
             style: {
               boxShadow: `inset 6px 0 0 0 ${user.color || "#222"}`,
-              paddingLeft: '12px',
+              paddingLeft: "12px",
             },
           });
         }
@@ -163,7 +178,7 @@ export default function Map() {
       console.debug("focusUserById: no known cursor for", sid);
       toast("No recent cursor position for that user.", {
         duration: 3000,
-        style: { boxShadow: `inset 6px 0 0 0 #666`, paddingLeft: '12px' },
+        style: { boxShadow: `inset 6px 0 0 0 #666`, paddingLeft: "12px" },
       });
     } catch (e) {}
   };
@@ -203,7 +218,7 @@ export default function Map() {
         onFocusUser={(id?: string) => focusUserById(id)}
       />
       <LeftPinPanel map={mapObj} />
-  <LeftPinPanel map={mapObj} />
+      <LeftPinPanel map={mapObj} />
     </>
   );
 }

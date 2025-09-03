@@ -1,6 +1,9 @@
 import cursorSvg from "../assets/cursors/Cursor.svg?raw";
 
-export function createRemoteCursorEl(initials: string, color: string): HTMLDivElement {
+export function createRemoteCursorEl(
+  initials: string,
+  color: string
+): HTMLDivElement {
   const container = document.createElement("div");
   container.style.display = "inline-flex";
   container.style.alignItems = "center";
@@ -24,7 +27,6 @@ export function createRemoteCursorEl(initials: string, color: string): HTMLDivEl
   label.style.lineHeight = "16px";
   label.style.whiteSpace = "nowrap";
 
-  // Add a span for the initials, set its color to white
   const span = document.createElement("span");
   span.textContent = initials || "??";
   span.style.color = "#fff";
