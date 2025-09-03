@@ -5,7 +5,7 @@ import type { LiveUser, LiveUserWithColor } from "../types";
 import { RemoteCursorManager } from "../lib/RemoteCursorManager";
 import { useMapboxMap } from "../hooks/useMapboxMap";
 import { useSocket } from "../hooks/useSocket";
-import { Notification } from "./Notification";
+import { toast } from "react-hot-toast";
 import PinLayer from "./PinLayer";
 import InspectorPanel from "./InspectorPanel";
 import LeftPinPanel from "./LeftPinPanel";
@@ -26,11 +26,7 @@ export default function Map() {
     transports: ["websocket"],
   });
 
-  // Notification state
-  const [notification, setNotification] = useState<{
-    message: string;
-    color?: string;
-  } | null>(null);
+  // legacy notification state removed — using react-hot-toast instead
 
   // User list state (from server)
   const [userList, setUserList] = useState<LiveUserWithColor[]>([]);
@@ -92,9 +88,13 @@ export default function Map() {
       (payload: { sid: string; user: LiveUserWithColor }) => {
         const { user } = payload;
         if (user.id !== clientUser.id) {
-          setNotification({
-            message: `${user.initials} has joined the board!`,
-            color: user.color,
+          toast(`${user.initials} has joined the board!`, {
+            duration: 3000,
+            // use an inset left accent so the pill stays rounded
+            style: {
+              boxShadow: `inset 6px 0 0 0 ${user.color || "#222"}`,
+              paddingLeft: '12px',
+            },
           });
         }
       }
@@ -104,10 +104,12 @@ export default function Map() {
       (payload: { sid: string; user: LiveUserWithColor }) => {
         const { user } = payload;
         if (user.id !== clientUser.id) {
-          setNotification({
-            message: `${user.initials} has left the board.`,
-            // right now, i think the user's color deletes before the notification is shown, so the color defaults to black. will fix soon.
-            color: user.color,
+          toast(`${user.initials} has left the board.`, {
+            duration: 3000,
+            style: {
+              boxShadow: `inset 6px 0 0 0 ${user.color || "#222"}`,
+              paddingLeft: '12px',
+            },
           });
         }
       }
@@ -159,9 +161,9 @@ export default function Map() {
       }
       // if we reach here, no known cursor location
       console.debug("focusUserById: no known cursor for", sid);
-      setNotification({
-        message: "No recent cursor position for that user.",
-        color: "#666",
+      toast("No recent cursor position for that user.", {
+        duration: 3000,
+        style: { boxShadow: `inset 6px 0 0 0 #666`, paddingLeft: '12px' },
       });
     } catch (e) {}
   };
@@ -201,13 +203,7 @@ export default function Map() {
         onFocusUser={(id?: string) => focusUserById(id)}
       />
       <LeftPinPanel map={mapObj} />
-      {notification && (
-        <Notification
-          message={notification.message}
-          userColor={notification.color}
-          onClose={() => setNotification(null)}
-        />
-      )}
+  <LeftPinPanel map={mapObj} />
     </>
   );
 }
