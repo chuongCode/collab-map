@@ -1,0 +1,78 @@
+:root {
+  --size: 20px;
+}
+
+.login-animated-bg {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  width: 100%;
+  /* dark fallback background */
+  background: #080808;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate; /* create new stacking context so backdrop-filter works on backdrop */
+}
+
+/* Place the animated conic + mask in a ::before so it sits behind the UI */
+.login-animated-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1; /* place behind the element so backdrop-filter samples it correctly */
+  background: conic-gradient(
+    from 180deg at 50% 70%,
+    #dd2590 0deg,
+    #dc6803 72deg,
+    #1570ef 144deg,
+    #dd2590 180deg,
+    #e22b2b 216deg,
+    #039855 288deg,
+    #8a3ffc 360deg
+  );
+  /* mask: tile of small dots + noise mask image */
+  -webkit-mask: radial-gradient(circle at 50% 50%, white 2px, transparent 2.5px)
+      50% 50% / var(--size) var(--size),
+    url("../assets/noise-mask.png") 256px 50% / 256px 256px;
+  mask: radial-gradient(circle at 50% 50%, white 2px, transparent 2.5px) 50% 50% /
+      var(--size) var(--size),
+    url("../assets/noise-mask.png") 256px 50% / 256px 256px;
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+  animation: flicker 20s infinite linear;
+}
+
+.login-animated-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  background-image: url("/src/assets/Map.svg");
+  background-repeat: no-repeat;
+  background-position: center 35%;
+  background-size: 160% auto;
+  filter: blur(4px);
+  will-change: transform, filter, opacity;
+}
+
+/* Ensure UI content inside the container sits above the ::after overlay */
+.login-animated-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* keyframes and subtle flicker for the mask (animates the mask position to create movement) */
+@keyframes flicker {
+  to {
+    -webkit-mask-position: 50% 50%, 0 50%;
+    mask-position: 50% 50%, 0 50%;
+  }
+}
+
+/* reduce motion consideration */
+@media (prefers-reduced-motion: reduce) {
+  .login-animated-bg {
+    animation: none !important;
+  }
+}

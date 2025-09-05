@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import "../styles/login-bg.css";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
 
@@ -82,8 +83,8 @@ export default function Login({ onLogin }: { onLogin?: () => void }) {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-[#0f0f0f]">
-      <div className="text-center p-8 bg-[#151515] rounded-lg shadow-lg w-full max-w-md">
+    <div className="login-animated-bg flex items-center justify-center min-h-screen">
+      <div className="text-center p-8 bg-[#0f0f0f] rounded-lg shadow-lg w-full max-w-md">
         <h1 className="text-2xl font-semibold text-white mb-6">
           Sign in to Collab Map
         </h1>
